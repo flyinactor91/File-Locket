@@ -1,0 +1,44 @@
+**All of this info can be envoked from the client**
+
+File Locket
+Created by Michael duPont (flyinactor91@gmail.com)
+v1.0.0 [28 03 2013]
+Python 2.7.3 - Unix
+
+Simple file storage service.
+Files stored on the server do not undergo further encryption.
+Passwords are "deliciously salted" and hashed client side so your precious digits are secure.
+Admin clear saves a backup of all files and storage dictionaries.
+
+Upgrades for future releases:
+	Choose dest directory upon getfile
+	Up arrow yields previous entries
+	File encryption (user-held keys)
+	File versioning (base already implemented)
+	User account support/authentication
+	Optional GUI (much later)
+
+
+
+Available commands:
+
+	sendfile		Send a file to the server
+	getfile			Get a file from the server
+	showfiles		Show stored files
+	delfile			Delete a file on the server
+	test			Test server connection
+	logout			Logout and quit
+	quit			Quit without logging out
+	
+Admin Tools (requires admin/server pw):
+
+	adminshowusers		Returns all saved usernames
+	adminclear		Clears all server lib data
+	adminshutdown		Shuts down server
+
+
+
+Release Notes:
+
+1.0.0 [28 03 2013]
+	Initial release
