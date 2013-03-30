@@ -16,6 +16,10 @@ def main():
 	quitFlag = False
 	defaultTimeout = 5
 	
+	
+	##--Check bin and make if unavailable--##
+	if not os.path.isdir('bin'):
+		os.mkdir('bin')
 	##--Load in (via pickle) User and File dictionaries--##
 	try:
 		storageFile = open('bin/ServerStorage.pkl', 'rb')
@@ -49,7 +53,7 @@ def main():
 			try:
 				uName = stringIn[1]
 				pWord = stringIn[2]
-				if dictFindB(uName , UserStorage):
+				if findInDict(uName , UserStorage):
 					connectionSocket.send('Error: Username already exists')
 					print '\tusername failed'
 				else:
@@ -67,7 +71,7 @@ def main():
 			try:
 				uName = stringIn[1]
 				pWord = stringIn[2]
-				if dictFindB(uName , UserStorage):
+				if findInDict(uName , UserStorage):
 					if UserStorage[uName][0] == pWord:
 						sessionID = str(random.randint(0 , 10**6))
 						UserStorage[uName][1] = sessionID
@@ -124,7 +128,7 @@ def main():
 						connectionSocket.send(ret)
 						connectionSocket.settimeout(30)
 						fileName = connectionSocket.recv(1024)
-						if dictFindB(fileName , FileStorage[uName]):
+						if findInDict(fileName , FileStorage[uName]):
 							connectionSocket.settimeout(defaultTimeout)
 							fout = file('bin/'+uName+'/'+fileName , 'rb')
 							fileLen = str(getFileSize(fout))

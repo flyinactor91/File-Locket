@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ##--Returns True if string is a valid key in given dictionary--##
-def dictFindB(string , dic):
+def findInDict(string , dic):
 	try:
 		for key in dic:
 			if key == string: return True
@@ -26,7 +26,7 @@ def getFileSize(fileObj):
 
 ##--Checks if userName and sessionID are both valid--##
 def checkCreds(userName , sessionID , dic):
-	if dictFindB(userName , dic):
+	if findInDict(userName , dic):
 		if dic[userName][1] == sessionID:
 			return 'Y'
 		else:

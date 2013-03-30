@@ -19,7 +19,7 @@ Passwords are "deliciously salted" and hashed client side so your precious digit
 ~~Admin clear saves a backup of all files and storage dictionaries.
 
 Upgrades for future releases:
-	Choose dest directory upon getfile
+	~~~~Choose dest directory upon getfile
 	Up arrow yields previous entries
 	File encryption (user-held keys)
 	File versioning
@@ -33,6 +33,7 @@ Available commands:
 	getfile			Get a file from the server
 	showfiles		Show stored files
 	delfile			Delete a file on the server
+	set				Change program settings
 	test			Test server connection
 	logout			Logout and quit
 	quit			Quit without logging out
@@ -46,6 +47,9 @@ Admin Tools (requires admin pw):
 noteString = """
 1.0.0 [28 03 2013]
 	Initial release
+
+1.x.x [x x x]
+	Added source and destination directory control
 """
 
 ##--Main Client Function--##
@@ -60,10 +64,12 @@ def main():
 		storageFile = open('ClientStorage.pkl', 'rb')
 		userName = pickle.load(storageFile)
 		sessionID = pickle.load(storageFile)
+		userSets = pickle.load(storageFile)
 		storageFile.close()
 	except:
 		userName = ""
 		sessionID = ""
+		userSets = {"senddir":"","destdir":""}
 
 	##--Ask user for name and init--##
 	if userName == "":
@@ -80,15 +86,15 @@ def main():
 		
 	##--Command Loop--##
 	while not quitFlag:
-		command = raw_input("\ncmd: ").lower()   #Ask user for command input
+		command = raw_input("\ncmd: ")   #Ask user for command input
 		
 		##--Send a file to the server--##
 		if command == 'sendfile':
-			sendFile(command + "&&&" + userName + "&&&" + sessionID , serverName , serverPort)
+			sendFile(command + "&&&" + userName + "&&&" + sessionID , userSets , serverName , serverPort)
 		
 		##--Recieve a file from the server--##
 		elif command == 'getfile':
-			getFile(command + "&&&" + userName + "&&&" + sessionID , serverName , serverPort)
+			getFile(command + "&&&" + userName + "&&&" + sessionID , userSets , serverName , serverPort)
 		
 		##--Returns a list  of files stored on the server--##
 		elif command == 'showfiles':
@@ -97,6 +103,10 @@ def main():
 		##--Delete a file on the server--##
 		elif command == 'delfile':
 			delFile(command + "&&&" + userName + "&&&" + sessionID , serverName , serverPort)
+		
+		##--Change user settings--##
+		elif command.split(' ')[0] == 'set':
+			userSets = settings(command.split(' ') , userSets)
 		
 		##--Checks for healthy connection and valid sessionID--##
 		elif command == 'test':
@@ -146,6 +156,7 @@ def main():
 	storageFile = open('ClientStorage.pkl', 'wb')
 	pickle.dump(userName , storageFile)
 	pickle.dump(sessionID , storageFile)
+	pickle.dump(userSets , storageFile)
 	storageFile.close()
 	
 	print "\nGoodbye\n"

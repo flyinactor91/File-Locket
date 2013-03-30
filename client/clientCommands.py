@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 from socket import *
-import hashlib , getpass
+import hashlib , getpass , os
 
 ##--Send a single string of data and recieve a single string of data--##
 def sendData(DATA , serverName , serverPort):
@@ -21,13 +21,13 @@ def sendData(DATA , serverName , serverPort):
 		print "Error: " + str(e)
 
 ##--Sends a file (regardless of contents or size) to the server--##
-def sendFile(credentials , serverName , serverPort):
+def sendFile(credentials , userSets , serverName , serverPort):
 	try:
 		fileName = "&&&"
 		while fileName.find("&&&") != -1:
 			fileName = raw_input("What file would you like to send?: ")
 			if fileName.find("&&&") != -1: print "Because of how request data is sent to the server, the file name cannot contain '&&&'"
-		fout = open(fileName , 'rb')
+		fout = open(userSets["senddir"] + fileName , 'rb')
 		clientSocket = socket(AF_INET , SOCK_STREAM)
 		clientSocket.connect((serverName , serverPort))
 		##--Get file name if input points to another dir
@@ -52,7 +52,7 @@ def sendFile(credentials , serverName , serverPort):
 		print "Error: " + str(e)
 
 ##--Recieve a file from the server and save to curdir
-def getFile(credentials , serverName , serverPort):
+def getFile(credentials , userSets , serverName , serverPort):
 	try:
 		clientSocket = socket(AF_INET , SOCK_STREAM)
 		clientSocket.connect((serverName , serverPort))
@@ -67,7 +67,7 @@ def getFile(credentials , serverName , serverPort):
 			if findInList(fileName , ret):
 				clientSocket.send(fileName)
 				fileLen = int(clientSocket.recv(1024))
-				fin = file(fileName , 'wb')
+				fin = file(userSets["destdir"] + fileName , 'wb')
 				finLen = 0 #current length of recieving file
 				clientSocket.send('send')
 				##--Recieve file of variable length--##
@@ -187,6 +187,36 @@ def signUp(serverName , serverPort):
 		print "Error: " + str(e)
 		return "" , False , ""
 
+##--Change user setting dictionary--##
+def settings(command , userSets):
+	if len(command) == 1: print "set [var] [value]\nClear var value with #clear\nVariables that can be set:"+getKeyString(userSets)
+	elif findInDict(command[1] , userSets):
+		if len(command) == 2:
+			print command[1] + ":  " + userSets[command[1]]
+		else:
+			if command[2] == "#clear":
+				command[2] = ""
+			elif command[1] == "senddir" or command[1] == "destdir":
+				if command[2][:1] == '~': command[2] = os.path.expanduser(command[2])
+				if command[2][:len(command[2])] != '/' and command[2] != "": command[2] += '/'
+				if not os.path.isdir(command[2]):
+					print command[2] + " is not a directory"
+					return userSets
+			userSets[command[1]] = command[2]
+	else:
+		print command[1] + " is not an available setting"
+	return userSets
+
+##--Admin controls require additional password--##
+def admin(command , userName , sessionID , serverName , serverPort):
+	password = getpass.getpass("Server Password: ")	#Ask for password to send to server
+	resp = sendData(command + "&&&" + userName + "&&&" + sessionID + "&&&" + saltHash(password , 'masteradmin') , serverName , serverPort)
+	if type(resp) != type(None): print resp
+	sucBool = True
+	if type(resp) == type(None) or resp[:6] == "Error:":
+		sucBool = False
+	return sucBool
+
 ##--Salts and hashes password using userName--##
 def saltHash(password , userName):
 	salted_password = "All'improvviso" + userName[:len(userName)-4] + password + userName[len(userName)-4:] + "Amore"
@@ -210,12 +240,18 @@ def findInList(item , listObj):
 	except:
 		return False
 
-##--Admin controls require additional password--##
-def admin(command , userName , sessionID , serverName , serverPort):
-	password = getpass.getpass("Server Password: ")	#Ask for password to send to server
-	resp = sendData(command + "&&&" + userName + "&&&" + sessionID + "&&&" + saltHash(password , 'masteradmin') , serverName , serverPort)
-	if type(resp) != type(None): print resp
-	sucBool = True
-	if type(resp) == type(None) or resp[:6] == "Error:":
-		sucBool = False
-	return sucBool
+##--Returns True if string is a valid key in given dictionary--##
+def findInDict(string , dic):
+	try:
+		for key in dic:
+			if key == string: return True
+		return False
+	except:
+		return False
+
+##--Returns a formatted string of dictionary keys--##
+def getKeyString(dic):
+	ret = ''
+	for key in dic:
+		ret += '\t\n' + key
+	return ret
