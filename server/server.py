@@ -5,6 +5,9 @@
 ##--v1.0.0 [28 03 2013]
 ##--Python 2.7.3 - Unix
 
+##--Known bugs:
+##--	%T in time.strftime is causing error on Win x64
+
 from serverCommands import *
 from socket import *
 import pickle , os , random , time
@@ -12,7 +15,8 @@ import pickle , os , random , time
 ##--Main Server Function--##
 def main():
 	serverPort = 60145
-	serverPassword = 'c4c98a50cf4abcd72737aff8679dc17b19a42eecb388c13133cd2de6685282578fe9c53320bae4b8b3ea88bf3e0079a35b4570bdfc81cad7cfb498f024b6fea3' #'letmein'
+	###The current server password is 'letmein'. To change, run the saltHash function found in client on your new password and paste the output below
+	serverPassword = 'c4c98a50cf4abcd72737aff8679dc17b19a42eecb388c13133cd2de6685282578fe9c53320bae4b8b3ea88bf3e0079a35b4570bdfc81cad7cfb498f024b6fea3'
 	quitFlag = False
 	defaultTimeout = 5
 	
@@ -42,7 +46,7 @@ def main():
 		connectionSocket , addr = serverSocket.accept()
 		connectionSocket.settimeout(defaultTimeout)
 		stringIn = connectionSocket.recv(1024)
-		stringIn = stringIn.split("&&&")
+		stringIn = stringIn.split('&&&')
 		command = stringIn[0]
 		print str(addr) , stringIn[1] , command
 		
@@ -101,9 +105,13 @@ def main():
 								line = connectionSocket.recv(1024)
 								fin.write(line)
 								finLen = getFileSize(fin)
+						if os.name == 'nt':   ##### %T is causing error on Win x64
+							timeString = time.strftime('%d-%b-%Y')
+						else:
+							timeString = time.strftime('%d-%b-%Y %T')
+						checksum = hashfile(fin, hashlib.sha512())
 						fin.close()
-						#FileStorage[uName][fileName] = [time.strftime("%d-%b-%Y %T")]   ##### %T is causing error on Windows
-						FileStorage[uName][fileName] = [time.strftime("%d-%b-%Y")]
+						FileStorage[uName][fileName] = [timeString , checksum]
 						connectionSocket.send('File received')
 						print '\t' + fileName + '  success'
 					except Exception , e:
@@ -134,7 +142,7 @@ def main():
 							fileLen = str(getFileSize(fout))
 							connectionSocket.send(fileLen)
 							rec = connectionSocket.recv(1024)
-							if rec == "send":
+							if rec == 'send':
 								outputData = fout.readlines()
 								for line in outputData:
 									sent = connectionSocket.send(line)
@@ -243,19 +251,19 @@ def main():
 				print '\tError: ' + str(e)
 		
 		##--Returns all usernames in UserStorage--##
-		elif command == "adminshowusers":
+		elif command == 'adminshowusers':
 			try:
 				cont = checkCreds(stringIn[1] , stringIn[2] , UserStorage)
 				if cont == 'Y':
 					password = stringIn[3]
 					if password == serverPassword:
-						retString = "\nUsernames Stored on Server:"
+						retString = '\nUsernames Stored on Server:'
 						for key in UserStorage:
 							retString += '\n\t' + key
 						connectionSocket.send(retString)
 					else:
-						print "\tincorrect password"
-						connectionSocket.send("Access Denied")
+						print '\tincorrect password'
+						connectionSocket.send('Access Denied')
 				else:
 					connectionSocket.send(cont)
 			except Exception , e:
@@ -264,8 +272,8 @@ def main():
 		##--Exception acts as a safeguard in case something went wrong during transmition--##
 		else:
 			try:
-				print "Command error"
-				connectionSocket.send("Server did not recognise the command given")
+				print 'Command error'
+				connectionSocket.send('Server did not recognise the command given')
 			except Exception , e:
 				print '\tError: ' + str(e)
 		

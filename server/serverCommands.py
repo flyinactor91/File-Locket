@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+import hashlib
+
 ##--Returns True if string is a valid key in given dictionary--##
 def findInDict(string , dic):
 	try:
@@ -35,3 +37,12 @@ def checkCreds(userName , sessionID , dic):
 	else:
 		print '\tusername failed'
 		return 'Error: Username does not exist'
+
+##--Returns checksum for given file using given hash--##
+##Ex:  hashfile(open(fileName, 'rb'), hashlib.sha256())
+def hashfile(afile, hasher, blocksize=65536):
+    buf = afile.read(blocksize)
+    while len(buf) > 0:
+        hasher.update(buf)
+        buf = afile.read(blocksize)
+    return hasher.digest()
