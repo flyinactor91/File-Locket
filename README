@@ -1,18 +1,42 @@
-**All of this info can be envoked from the client**
-
 File Locket
 Created by Michael duPont (flyinactor91@gmail.com)
-v1.0.0 [28 03 2013]
+v1.0.0a [04 04 2013]
 Python 2.7.3 - Unix
 This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License
 
-Simple file storage service.
-Files stored on the server do not undergo further encryption.
-Passwords are "deliciously salted" and hashed client side so your precious digits are secure.
-Admin clear saves a backup of all files and storage dictionaries.
+Overview:
+Simple file storage service
+Store, access, and delete files
+
+Client:
+Saves username, sessionID, and user preferences between sessions
+--User prefs: senddir , destdir
+User can set different send and dest folders for files to/from server
+--Defauts to curdir but saves send/dest between sessions
+
+Server:
+Files stored on the server do not undergo further encryption
+--File encryption on the list to implement
+Database stored as two dictionaries and saved between command loops
+--UserStorage = { username : [encrypted password , current sessionID] , ...}
+--FileStorage = { username : { filename : [datetime uploaded , checksum] , ...} , ...}
+
+Security:
+Passwords are salted and hashed client side so server never sees the plain text
+All password entry doesn't show text in terminal
+User's sessionID changes upon new login -> user can only transmit new commands on one machine at a time
+--Large file upload will continue even if user moves to new terminal changing sessionID
+Option to change password will not be added until user authentication
+
+Admin tools:
+Client asked for admin password which must match encrypted server password
+Admin can shutdown server remotely
+Adminclear saves a backup of database by renaming ~bin and making new blank bin folder
+--Previous backup must be manually removed before next clear
 
 Upgrades for future releases:
 	~~~~Choose dest directory upon getfile
+	Folder support
 	Up arrow yields previous entries
 	File encryption (user-held keys)
 	File versioning (base already implemented)
@@ -22,7 +46,6 @@ Upgrades for future releases:
 
 
 Available commands:
-
 	sendfile		Send a file to the server
 	getfile			Get a file from the server
 	showfiles		Show stored files
@@ -32,9 +55,8 @@ Available commands:
 	quit			Quit without logging out
 	
 Admin Tools (requires admin/server pw):
-
-	adminshowusers		Returns all saved usernames
-	adminclear		Clears all server lib data
+	adminshowusers		Returns all usernames
+	adminclear		Clears all server data
 	adminshutdown		Shuts down server
 
 
