@@ -2,7 +2,6 @@ File Locket
 Created by Michael duPont (flyinactor91@gmail.com)
 v1.0.0a [04 04 2013]
 Python 2.7.3 - Unix
-This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License
 
 Overview:
 Simple file storage service
@@ -35,7 +34,6 @@ Adminclear saves a backup of database by renaming ~bin and making new blank bin 
 --Previous backup must be manually removed before next clear
 
 Upgrades for future releases:
-	~~~~Choose dest directory upon getfile
 	Folder support
 	Up arrow yields previous entries
 	File encryption (user-held keys)
@@ -50,13 +48,14 @@ Available commands:
 	getfile			Get a file from the server
 	showfiles		Show stored files
 	delfile			Delete a file on the server
+	set				Change program settings
 	test			Test server connection
 	logout			Logout and quit
 	quit			Quit without logging out
 	
 Admin Tools (requires admin/server pw):
 	adminshowusers		Returns all usernames
-	adminclear		Clears all server data
+	adminclear			Clears all server data
 	adminshutdown		Shuts down server
 
 

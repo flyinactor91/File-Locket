@@ -10,9 +10,8 @@ import pickle
 aboutString = """
 File Locket
 Created by Michael duPont (flyinactor91@gmail.com)
-v1.0.0 [28 03 2013]
+v1.0.0a [04 04 2013]
 Python 2.7.3 - Unix
-This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License
 
 Upgrades for future releases:
 	Folder support
@@ -35,9 +34,9 @@ Available commands:
 	quit			Quit without logging out
 	
 Admin Tools (requires admin pw):
-	adminshowusers		Returns all saved usernames
-	adminclear		Clears all server lib data
-	adminshutdown		Shuts down server and saves data
+	adminshowusers		Returns all usernames
+	adminclear		Clears all server data
+	adminshutdown		Shuts down server
 """
 
 noteString = """
