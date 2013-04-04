@@ -14,13 +14,8 @@ v1.0.0 [28 03 2013]
 Python 2.7.3 - Unix
 This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License
 
-Simple file storage service.
-Files stored on the server do not undergo further encryption.
-Passwords are "deliciously salted" and hashed client side so your precious digits are secure.
-Admin clear saves a backup of all files and storage dictionaries.
-
 Upgrades for future releases:
-	~~~~Choose dest directory upon getfile
+	Folder support
 	Up arrow yields previous entries
 	File encryption (user-held keys)
 	File versioning

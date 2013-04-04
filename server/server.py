@@ -105,12 +105,12 @@ def main():
 								line = connectionSocket.recv(1024)
 								fin.write(line)
 								finLen = getFileSize(fin)
+						fin.close()
 						if os.name == 'nt':   ##### %T is causing error on Win x64
 							timeString = time.strftime('%d-%b-%Y')
 						else:
 							timeString = time.strftime('%d-%b-%Y %T')
-						checksum = hashfile(fin, hashlib.sha512())
-						fin.close()
+						checksum = hashfile(open('bin/'+uName+'/'+fileName , 'rb') , hashlib.sha512())
 						FileStorage[uName][fileName] = [timeString , checksum]
 						connectionSocket.send('File received')
 						print '\t' + fileName + '  success'
