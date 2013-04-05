@@ -1,5 +1,7 @@
 #!/usr/bin/python
 
+##--Function order: findInDict , findInList , getKeyString , getFileSize , checkCreds , hashFile
+
 import hashlib
 
 ##--Returns True if string is a valid key in given dictionary--##
@@ -7,6 +9,15 @@ def findInDict(string , dic):
 	try:
 		for key in dic:
 			if key == string: return True
+		return False
+	except:
+		return False
+
+##--Returns True if value is found in given list--##
+def findInList(item , listObj):
+	try:
+		for i in listObj:
+			if i == item: return True
 		return False
 	except:
 		return False
@@ -39,8 +50,8 @@ def checkCreds(userName , sessionID , dic):
 		return 'Error: Username does not exist'
 
 ##--Returns checksum for given file using given hash--##
-##Ex:  hashfile(open(fileName, 'rb'), hashlib.sha256())
-def hashfile(afile, hasher, blocksize=65536):
+##Ex:  hashfile(open(fileName, 'rb'), hashlib.sha256())   must be in r mode
+def hashFile(afile, hasher, blocksize=65536):
     buf = afile.read(blocksize)
     while len(buf) > 0:
         hasher.update(buf)

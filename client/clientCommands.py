@@ -1,5 +1,9 @@
 #!/usr/bin/python
 
+##--Function order:
+##--Main functions: sendData , sendFile , getFile , showFiles , delFile , startUp , login , signUp , settings , admin
+##--Minor functions: saltHash , getFileSize , findInList , findInDict , getKeyString , hashFile
+
 from socket import *
 import hashlib , getpass , os
 
@@ -11,8 +15,6 @@ def sendData(DATA , serverName , serverPort):
 		clientSocket.connect((serverName , serverPort))
 		while totalsent < len(DATA):
 			sent = clientSocket.send(DATA[totalsent:])
-			if sent == 0:
-				raise RuntimeError('socket connection broken')
 			totalsent = totalsent + sent
 		ret = clientSocket.recv(1024)
 		clientSocket.close()
@@ -34,7 +36,8 @@ def sendFile(credentials , userSets , serverName , serverPort):
 		if fileName.find('/') != -1:
 			fileName = fileName[fileName.rfind('/')+1:]
 		fileLen = str(getFileSize(fout))
-		DATA = credentials + '&&&' + fileName + '&&&' + fileLen
+		checksum = hashFile(fout , hashlib.sha512())
+		DATA = credentials + '&&&' + fileName + '&&&' + checksum + '&&&' + fileLen
 		sent = clientSocket.send(DATA)
 		#Server checks if sessionID matches and preps file for contents
 		rec = clientSocket.recv(1024)
@@ -189,7 +192,7 @@ def signUp(serverName , serverPort):
 
 ##--Change user setting dictionary--##
 def settings(command , userSets):
-	if len(command) == 1: print 'set [var] [value]\nClear var value with #clear\nVariables that can be set:' + getKeyString(userSets)
+	if len(command) == 1: print 'set [var] (value)\nClear var value with #clear\n\nVariables that can be set:' + getKeyString(userSets)
 	elif findInDict(command[1] , userSets):
 		if len(command) == 2:
 			print command[1] + ':  ' + userSets[command[1]]
@@ -255,3 +258,13 @@ def getKeyString(dic):
 	for key in dic:
 		ret += '\t\n' + key
 	return ret
+
+##--Returns checksum for given file using given hash--##
+##Ex:  hashfile(open(fileName, 'rb'), hashlib.sha256())   #must be in r mode
+def hashFile(afile, hasher, blocksize=65536):
+	buf = afile.read(blocksize)
+	while len(buf) > 0:
+		hasher.update(buf)
+		buf = afile.read(blocksize)
+	afile.seek(0)
+	return hasher.digest()

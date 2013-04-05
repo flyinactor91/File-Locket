@@ -1,6 +1,6 @@
 File Locket
 Created by Michael duPont (flyinactor91@gmail.com)
-v1.0.0a [04 04 2013]
+v1.0.0a [05 04 2013]
 Python 2.7.3 - Unix
 
 Overview:
@@ -34,16 +34,40 @@ Adminclear saves a backup of database by renaming ~bin and making new blank bin 
 --Previous backup must be manually removed before next clear
 
 Upgrades for future releases:
+<<<<<<< HEAD
+Folder support
+Up arrow yields previous entries
+File encryption (user-held keys)
+File versioning (base already implemented)
+User account support/authentication
+Optional GUI (much later)
+=======
 	Folder support
 	Up arrow yields previous entries
 	File encryption (user-held keys)
 	File versioning (base already implemented)
 	User account support/authentication
 	Optional GUI (much later)
+>>>>>>> a32c566fc3c2d98af1fe283361370ad65e8d9567
 
 
 
 Available commands:
+<<<<<<< HEAD
+sendfile Send a file to the server
+getfile Get a file from the server
+showfiles Show stored files
+delfile Delete a file on the server
+set Change program settings
+test Test server connection
+logout Logout and quit
+quit Quit without logging out
+
+Admin Tools (requires admin/server pw):
+adminshowusers Returns all usernames
+adminclear Clears all server data
+adminshutdown Shuts down server
+=======
 	sendfile		Send a file to the server
 	getfile			Get a file from the server
 	showfiles		Show stored files
@@ -57,14 +81,15 @@ Admin Tools (requires admin/server pw):
 	adminshowusers		Returns all usernames
 	adminclear			Clears all server data
 	adminshutdown		Shuts down server
+>>>>>>> a32c566fc3c2d98af1fe283361370ad65e8d9567
 
 
 
 Release Notes:
 
 1.0.0 [28 03 2013]
-	Initial release
+Initial release
 
 1.x.x [x x x]
-	Added source and destination directory control
-	Server improvements
+Added source and destination directory control
+Server improvements

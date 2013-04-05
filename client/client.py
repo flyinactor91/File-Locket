@@ -10,8 +10,9 @@ import pickle
 aboutString = """
 File Locket
 Created by Michael duPont (flyinactor91@gmail.com)
-v1.0.0a [04 04 2013]
+v1.0.0 [28 03 2013]
 Python 2.7.3 - Unix
+This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License
 
 Upgrades for future releases:
 	Folder support
@@ -28,15 +29,15 @@ Available commands:
 	getfile			Get a file from the server
 	showfiles		Show stored files
 	delfile			Delete a file on the server
-	set				Change program settings
+	set			Change program settings
 	test			Test server connection
 	logout			Logout and quit
 	quit			Quit without logging out
 	
 Admin Tools (requires admin pw):
-	adminshowusers		Returns all usernames
-	adminclear		Clears all server data
-	adminshutdown		Shuts down server
+	adminshowusers		Returns all saved usernames
+	adminclear		Clears all server lib data
+	adminshutdown		Shuts down server and saves data
 """
 
 noteString = """
@@ -94,7 +95,7 @@ def main():
 		
 		##--Returns a list  of files stored on the server--##
 		elif command == 'showfiles':
-			showFiles(command + '&&&' + userName + '&&&' + sessionID , serverName , serverPort)
+			print sendData(command + '&&&' + userName + '&&&' + sessionID , serverName , serverPort)
 		
 		##--Delete a file on the server--##
 		elif command == 'delfile':
