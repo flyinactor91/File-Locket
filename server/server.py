@@ -2,11 +2,11 @@
 
 ##--File Locket (server)
 ##--Created by Michael duPont (flyinactor91@gmail.com)
-##--v1.0.0 [28 03 2013]
+##--v1.0.0a [06 04 2013]
 ##--Python 2.7.3 - Unix
 
 ##--Known bugs:
-##--	%T in time.strftime is causing error on Win x64
+##--	Fixed  --  %T in time.strftime is causing error on Win x64
 
 from serverCommands import *
 from socket import *
@@ -14,12 +14,14 @@ import pickle , os , random , time
 
 ##--Main Server Function--##
 def main():
+	##--Server custom settings--##
 	serverPort = 60145
-	###The current server password is 'letmein'. To change, run the saltHash function found in client on your new password and paste the output below
+	###The current server password is 'letmein'. To change, run the saltHash function found in clientCommands on your new password and paste the output below
 	serverPassword = 'c4c98a50cf4abcd72737aff8679dc17b19a42eecb388c13133cd2de6685282578fe9c53320bae4b8b3ea88bf3e0079a35b4570bdfc81cad7cfb498f024b6fea3'
-	defaultTimeout = 5
-	userInputTimeout = 30
+	defaultTimeout = 5		#Timeout used for normal connection conditions
+	userInputTimeout = 30	#Timeout when response is needed to be typed by client
 	
+	##--Accepted commands--##
 	noCredCommands = ['signup' , 'login']
 	credCommands = ['sendfile' , 'getfile' , 'showfiles' , 'delfile' , 'test' , 'adminshutdown' , 'adminclear' , 'adminshowusers']
 	
@@ -116,10 +118,7 @@ def main():
 										fin.write(line)
 										finLen = getFileSize(fin)
 								fin.close()
-								if os.name == 'nt':   ##### %T is causing error on Win x64
-									timeString = time.strftime('%d-%b-%Y')
-								else:
-									timeString = time.strftime('%d-%b-%Y %T')
+								timeString = time.strftime('%d:%m:%Y-%X')
 								checksum = hashFile(open('bin/'+uName+'/'+fileName , 'rb') , hashlib.sha512())
 								FileStorage[uName][fileName] = [timeString , checksum]
 								connectionSocket.send('File received')

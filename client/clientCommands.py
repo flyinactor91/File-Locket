@@ -195,7 +195,10 @@ def settings(command , userSets):
 	if len(command) == 1: print 'set [var] (value)\nClear var value with #clear\n\nVariables that can be set:' + getKeyString(userSets)
 	elif findInDict(command[1] , userSets):
 		if len(command) == 2:
-			print command[1] + ':  ' + userSets[command[1]]
+			setVal = userSets[command[1]]
+			if setVal == '':
+				setVal = 'No value set'
+			print command[1] + ':  ' + setVal
 		else:
 			if command[2] == '#clear':
 				command[2] = ''
@@ -211,9 +214,9 @@ def settings(command , userSets):
 	return userSets
 
 ##--Admin controls require additional password--##
-def admin(command , userName , sessionID , serverName , serverPort):
+def admin(credentials , serverName , serverPort):
 	password = getpass.getpass('Server Password: ')	#Ask for password to send to server
-	resp = sendData(command + '&&&' + userName + '&&&' + sessionID + '&&&' + saltHash(password , 'masteradmin') , serverName , serverPort)
+	resp = sendData(credentials + '&&&' + saltHash(password , 'masteradmin') , serverName , serverPort)
 	if type(resp) != type(None): print resp
 	sucBool = True
 	if type(resp) == type(None) or resp[:6] == 'Error:':

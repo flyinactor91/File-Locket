@@ -10,9 +10,8 @@ import pickle
 aboutString = """
 File Locket
 Created by Michael duPont (flyinactor91@gmail.com)
-v1.0.0 [28 03 2013]
+v1.0.0a [06 04 2013]
 Python 2.7.3 - Unix
-This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License
 
 Upgrades for future releases:
 	Folder support
@@ -46,15 +45,15 @@ noteString = """
 
 1.x.x [x x x]
 	Added source and destination directory control
+	File transfer improvements
 	Server improvements
 """
 
 ##--Main Client Function--##
 def main():
-	serverName = 'localhost' #'localhost' ######Change this to the IP address of whatever computer the server is running on
-	serverPort = 60145
-	command = ''
-	quitFlag = False
+	##--Server connection settings--##
+	serverName = 'localhost'  	#Change to IP address server computer
+	serverPort = 60145			#Should match that int set on server
 	
 	try:
 		##--Load in (via pickle) IP dictionary--##
@@ -67,11 +66,20 @@ def main():
 		userName = ''
 		sessionID = ''
 		userSets = {'senddir':'','destdir':''}
-
+	
+	command = ''
+	quitFlag = False
+	
 	##--Ask user for name and init--##
 	if userName == '':
 		while userName == '':
 			userName , sucBool , sessionID = startUp(serverName , serverPort)
+		##--Save userName and sessionID--##
+		storageFile = open('ClientStorage.pkl', 'wb')
+		pickle.dump(userName , storageFile)
+		pickle.dump(sessionID , storageFile)
+		pickle.dump(userSets , storageFile)
+		storageFile.close()
 	else:
 		print '\nWelcome back' , userName
 		sucBool = True
@@ -84,22 +92,23 @@ def main():
 	##--Command Loop--##
 	while not quitFlag:
 		command = raw_input('\ncmd: ')   #Ask user for command input
+		credentials = command + '&&&' + userName + '&&&' + sessionID
 		
 		##--Send a file to the server--##
 		if command == 'sendfile':
-			sendFile(command + '&&&' + userName + '&&&' + sessionID , userSets , serverName , serverPort)
+			sendFile(credentials , userSets , serverName , serverPort)
 		
 		##--Recieve a file from the server--##
 		elif command == 'getfile':
-			getFile(command + '&&&' + userName + '&&&' + sessionID , userSets , serverName , serverPort)
+			getFile(credentials , userSets , serverName , serverPort)
 		
 		##--Returns a list  of files stored on the server--##
 		elif command == 'showfiles':
-			print sendData(command + '&&&' + userName + '&&&' + sessionID , serverName , serverPort)
+			print sendData(credentials , serverName , serverPort)
 		
 		##--Delete a file on the server--##
 		elif command == 'delfile':
-			delFile(command + '&&&' + userName + '&&&' + sessionID , serverName , serverPort)
+			delFile(credentials , serverName , serverPort)
 		
 		##--Change user settings--##
 		elif command.split(' ')[0] == 'set':
@@ -107,7 +116,7 @@ def main():
 		
 		##--Checks for healthy connection and valid sessionID--##
 		elif command == 'test':
-			print sendData(command + '&&&' + userName + '&&&' + sessionID , serverName , serverPort)
+			print sendData(credentials , serverName , serverPort)
 		
 		##--Log user out of program and shutdown--##
 		elif command == 'logout':
@@ -119,7 +128,7 @@ def main():
 			##--AdminClear clears server storage--##		
 			##--AdminShowUsers shows all user names stored on the server--##		
 		elif command == 'adminshutdown' or command == 'adminclear' or command == 'adminshowusers':
-			sucBool = admin(command , userName , sessionID , serverName , serverPort)
+			sucBool = admin(credentials , serverName , serverPort)
 			if command == 'adminshutdown' and sucBool:
 				quitFlag = True
 			elif command == 'adminclear' and sucBool:
