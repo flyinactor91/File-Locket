@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ##--Function order:
-##--Main functions: sendData , sendFile , getFile , showFiles , delFile , startUp , login , signUp , settings , admin
+##--Main functions: sendData , sendFile , getFile , showFiles , delFile , versioning , startUp , login , signUp , settings , admin
 ##--Minor functions: saltHash , getFileSize , findInList , findInDict , getKeyString , hashFile
 
 from socket import *
@@ -64,9 +64,8 @@ def getFile(credentials , userSets , serverName , serverPort):
 		ret = clientSocket.recv(1024)
 		print ret
 		if ret != 'You have not uploaded any files':
-			print ''
-			ret = ret.split('\t\n') #Create searchable list from file names
-			fileName = raw_input('File: ')
+			ret = ret.split('\n') #Create searchable list from file names
+			fileName = raw_input('\nFile: ')
 			if findInList(fileName , ret):
 				clientSocket.send(fileName)
 				fileLen = int(clientSocket.recv(1024))
@@ -88,7 +87,7 @@ def getFile(credentials , userSets , serverName , serverPort):
 		print 'Error: ' + str(e)
 
 ##--Displays a list of files stored on the server--##
-def showFiles(credentials , serverName , serverPort):
+def viewFiles(credentials , serverName , serverPort):
 	try:
 		clientSocket = socket(AF_INET , SOCK_STREAM)
 		clientSocket.connect((serverName , serverPort))
@@ -111,7 +110,7 @@ def delFile(credentials , serverName , serverPort):
 		print ret
 		if ret != 'You have not uploaded any files':
 			print ''
-			ret = ret.split('\t\n') #Create searchable list from file names
+			ret = ret.split('\n') #Create searchable list from file names
 			fileName = raw_input('File: ')
 			if findInList(fileName , ret):
 				clientSocket.send(fileName)
@@ -121,6 +120,45 @@ def delFile(credentials , serverName , serverPort):
 		clientSocket.close()
 	except Exception , e:
 		print 'Error: ' + str(e)
+
+def versioning(credentials , verCommand , userSets , serverName , serverPort):
+	#try:
+	clientSocket = socket(AF_INET , SOCK_STREAM)
+	clientSocket.connect((serverName , serverPort))
+	clientSocket.send(credentials+'&&&'+verCommand)
+	#Server checks if sessionID matches and sends list of files (if any)
+	ret = clientSocket.recv(1024)
+	print ret
+	if ret != 'You have not uploaded any files':
+		fileName = raw_input('\nFile: ')
+		if findInList(fileName , ret.split('\n')):
+			clientSocket.send(fileName)
+			#Server sends list of file versions
+			ret = clientSocket.recv(1024)
+			print ret
+			if verCommand != 'view':
+				verNum = int(raw_input('\nVersion number: '))-1
+				if verNum in range(len(ret.split('\n'))-1):
+					clientSocket.send(str(verNum))
+					fileLen = int(clientSocket.recv(1024))
+					fin = file(userSets['destdir'] + str(verNum+1) + '#' + fileName , 'wb')
+					finLen = 0 #current length of recieving file
+					clientSocket.send('send')
+					##--Recieve file of variable length--##
+					while finLen < fileLen:
+						line = clientSocket.recv(1024)
+						fin.write(line)
+						finLen = getFileSize(fin)
+					fin.close()
+					clientSocket.send('success')
+					print 'File recieved'
+				else:
+					print 'Not a version number'
+		else:
+			print 'Error: Not an available file'
+	clientSocket.close()
+	#except Exception , e:
+		#print 'Error: ' + str(e)
 
 ##--Called if no active user. Invokes login or startup--##
 def startUp(serverName , serverPort):
@@ -192,7 +230,7 @@ def signUp(serverName , serverPort):
 
 ##--Change user setting dictionary--##
 def settings(command , userSets):
-	if len(command) == 1: print 'set [var] (value)\nClear var value with #clear\n\nVariables that can be set:' + getKeyString(userSets)
+	if len(command) == 1: print '\nset [var] (value)\nClear var value with #clear\nVariables that can be set:' + getKeyString(userSets)
 	elif findInDict(command[1] , userSets):
 		if len(command) == 2:
 			setVal = userSets[command[1]]

@@ -6,6 +6,7 @@ Python 2.7.3 - Unix
 Overview:
 Simple file storage service
 Store, access, and delete files
+Files are versioned and can be downloaded
 
 Client:
 Saves username, sessionID, and user preferences between sessions
@@ -20,7 +21,7 @@ Files stored on the server do not undergo further encryption
 Storage pickle save/load order: UserStorage, FileStorage
 Database stored as two dictionaries and saved between command loops
 --UserStorage = { username : [encrypted password , current sessionID] , ...}
---FileStorage = { username : { filename : [datetime uploaded , checksum] , ...} , ...}
+--FileStorage = { username : { filename : [datetime uploaded , checksum [list of version datetimes]] , ...} , ...}
 
 Security:
 Passwords are salted and hashed client side so server never sees the plain text
@@ -39,7 +40,7 @@ Upgrades for future releases:
 	Folder support
 	Up arrow yields previous entries
 	File encryption (user-held keys)
-	File versioning (base already implemented)
+	~~File versioning
 	User account support/authentication
 	Optional GUI (much later)
 
@@ -50,6 +51,7 @@ Available commands:
 	getfile			Get a file from the server
 	showfiles		Show stored files
 	delfile			Delete a file on the server
+	versions		File version options
 	set			Change program settings
 	test			Test server connection
 	logout			Logout and quit
@@ -68,6 +70,7 @@ Release Notes:
 Initial release
 
 1.x.x [x x x]
+File versioning
 Added source and destination directory control
 File transfer improvements
 Server improvements

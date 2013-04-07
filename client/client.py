@@ -17,7 +17,7 @@ Upgrades for future releases:
 	Folder support
 	Up arrow yields previous entries
 	File encryption (user-held keys)
-	File versioning
+	~~File versioning
 	User account support/authentication
 	Optional GUI (much later)
 """
@@ -26,8 +26,9 @@ helpString = """
 Available commands:
 	sendfile		Send a file to the server
 	getfile			Get a file from the server
-	showfiles		Show stored files
+	viewfiles		View stored files
 	delfile			Delete a file on the server
+	versions		File version options
 	set			Change program settings
 	test			Test server connection
 	logout			Logout and quit
@@ -44,6 +45,7 @@ noteString = """
 	Initial release
 
 1.x.x [x x x]
+	File versioning
 	Added source and destination directory control
 	File transfer improvements
 	Server improvements
@@ -92,7 +94,7 @@ def main():
 	##--Command Loop--##
 	while not quitFlag:
 		command = raw_input('\ncmd: ')   #Ask user for command input
-		credentials = command + '&&&' + userName + '&&&' + sessionID
+		credentials = command.split(' ')[0] + '&&&' + userName + '&&&' + sessionID
 		
 		##--Send a file to the server--##
 		if command == 'sendfile':
@@ -103,12 +105,23 @@ def main():
 			getFile(credentials , userSets , serverName , serverPort)
 		
 		##--Returns a list  of files stored on the server--##
-		elif command == 'showfiles':
+		elif command == 'viewfiles':
 			print sendData(credentials , serverName , serverPort)
 		
 		##--Delete a file on the server--##
 		elif command == 'delfile':
 			delFile(credentials , serverName , serverPort)
+			
+		##--Get or delete a versioned file on the server--##
+		elif command.split(' ')[0] == 'versions':
+			if len(command.split(' ')) != 2:
+				print '\nversions [command]\nAvailable commands:\nget\nview'
+			else:
+				verCommand = command.split(' ')[1]
+				if verCommand == 'get' or verCommand == 'view':
+					versioning(credentials , verCommand , userSets , serverName , serverPort)
+				else:
+					print 'Not a recognised command'
 		
 		##--Change user settings--##
 		elif command.split(' ')[0] == 'set':

@@ -26,7 +26,14 @@ def findInList(item , listObj):
 def getKeyString(dic):
 	ret = ''
 	for key in dic:
-		ret += '\t\n' + key
+		ret += '\n' + key
+	return ret
+
+##--Returns a formatted string of numbered list elements--##
+def getNumListString(lst):
+	ret = ''
+	for num in range(len(lst)):
+		ret += '\n' + str(num+1) + '.  ' + str(lst[num])
 	return ret
 
 ##--Returns the length of a file--##
