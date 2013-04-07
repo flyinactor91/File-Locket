@@ -5,9 +5,6 @@
 ##--v1.0.0a [06 04 2013]
 ##--Python 2.7.3 - Unix
 
-##--Known bugs:
-##--	Fixed  --  %T in time.strftime is causing error on Win x64
-
 from serverCommands import *
 from socket import *
 import pickle , os , random , time
@@ -46,42 +43,42 @@ def main():
 	##--Main Loop--##
 	quitFlag = False
 	while not quitFlag:
-		
-		##--Begin once the server recieves a connection--##
-		connectionSocket , addr = serverSocket.accept()
-		connectionSocket.settimeout(defaultTimeout)
-		stringIn = connectionSocket.recv(1024)
-		stringIn = stringIn.split('&&&')
-		command = stringIn[0]
-		
-		##--Command Rec--##
-		
-		##--Requires username and password--##
-		if findInList(command , noCredCommands):
-			try:
-				uName = stringIn[1]
+		try:
+			##--Begin once the server recieves a connection--##
+			connectionSocket , addr = serverSocket.accept()
+			connectionSocket.settimeout(defaultTimeout)
+			stringIn = connectionSocket.recv(1024)
+			stringIn = stringIn.split('&&&')
+			command = stringIn[0]
+			
+			##--Command Rec--##
+			
+			##--Requires username and password--##
+			if findInList(command , noCredCommands):
+				userName = stringIn[1]
 				pWord = stringIn[2]
-				print str(addr) , uName , command
+				print str(addr) , userName , command
 				
 				##--Server creates new folder and library entries and returns valid sessionID--##
 				if command == 'signup':
-					if findInDict(uName , UserStorage):
+					if findInDict(userName , UserStorage):
 						connectionSocket.send('Error: Username already exists')
 						print '\tusername failed'
 					else:
 						sessionID = str(random.randint(0 , 10**6))
-						UserStorage[uName] = [pWord , sessionID]
-						FileStorage[uName] = {}
-						if not os.path.isdir((os.getcwd())+'/bin/'+uName):
-							os.mkdir((os.getcwd())+'/bin/'+uName)
+						UserStorage[userName] = [pWord , sessionID]
+						FileStorage[userName] = {}
+						if not os.path.isdir((os.getcwd())+'/bin/'+userName):
+							os.mkdir((os.getcwd())+'/bin/'+userName)
+							os.mkdir((os.getcwd())+'/bin/'+userName+'/.fileversions')
 						connectionSocket.send('Signup successful:' + sessionID)
 				
 				##--Server returns valid sessionID--##
 				elif command == 'login':
-					if findInDict(uName , UserStorage):
-						if UserStorage[uName][0] == pWord:
+					if findInDict(userName , UserStorage):
+						if UserStorage[userName][0] == pWord:
 							sessionID = str(random.randint(0 , 10**6))
-							UserStorage[uName][1] = sessionID
+							UserStorage[userName][1] = sessionID
 							connectionSocket.send('Login successful:' + sessionID)
 						else:
 							connectionSocket.send('Error: Password does not match')
@@ -89,38 +86,43 @@ def main():
 					else:
 						connectionSocket.send('Error: Username does not exist')
 						print '\tusername failed'
-			except Exception , e:
-				print '\tError: ' + str(e)
-		
-		##--Requires username and sessionID--##
-		elif findInList(command , credCommands):
-			try:
-				uName = stringIn[1]
+			
+			##--Requires username and sessionID--##
+			elif findInList(command , credCommands):
+				userName = stringIn[1]
 				sessionID = stringIn[2]
-				print str(addr) , uName , command
-				cont = checkCreds(uName , sessionID , UserStorage)
+				print str(addr) , userName , command
+				cont = checkCreds(userName , sessionID , UserStorage)
 				if cont == 'Y':
 					
 					##--Server recieves file and stores in user's folder--##
 					if command == 'sendfile':
 						fileName = stringIn[3]
 						recvChecksum = stringIn[4]
-						if findInDict(fileName , FileStorage[uName]) and FileStorage[uName][fileName][1] == recvChecksum:
+						if findInDict(fileName , FileStorage[userName]) and FileStorage[userName][fileName][1] == recvChecksum:
 							connectionSocket.send('File has not changed since last upload')
 						else:
 							connectionSocket.send('Connection successful')
 							try:
 								fileLen = int(stringIn[5])
 								finLen = 0
-								fin = file('bin/'+uName+'/'+fileName , 'wb')
+								timeString = time.strftime('%d:%m:%Y-%X')
+								fin = file('bin/'+userName+'/'+fileName , 'wb')
+								if not os.path.isdir('bin/'+userName+'/.fileversions/'+fileName):
+									os.mkdir((os.getcwd())+'/bin/'+userName+'/.fileversions/'+fileName)
+									FileStorage[userName][fileName] = ['','',[]]
+								finVer = file('bin/'+userName+'/.fileversions/'+fileName+'/'+str(len(FileStorage[userName][fileName][2]))+'&&&'+fileName , 'wb')
 								while finLen < fileLen:
 										line = connectionSocket.recv(1024)
 										fin.write(line)
+										finVer.write(line)
 										finLen = getFileSize(fin)
 								fin.close()
-								timeString = time.strftime('%d:%m:%Y-%X')
-								checksum = hashFile(open('bin/'+uName+'/'+fileName , 'rb') , hashlib.sha512())
-								FileStorage[uName][fileName] = [timeString , checksum]
+								checksum = hashFile(open('bin/'+userName+'/'+fileName , 'rb') , hashlib.sha512())
+								FileStorage[userName][fileName][0] = timeString
+								FileStorage[userName][fileName][1] = checksum
+								FileStorage[userName][fileName][2].append(timeString)
+								#print FileStorage[userName][fileName][2][len(FileStorage[userName][fileName][2])-1]
 								connectionSocket.send('File received')
 								print '\t' + fileName + '  success'
 							except Exception , e:
@@ -129,7 +131,7 @@ def main():
 		
 					##--Sends the requested file to the user--##
 					elif command == 'getfile':
-						ret = getKeyString(FileStorage[uName])
+						ret = getKeyString(FileStorage[userName])
 						if ret == '':
 							ret = 'You have not uploaded any files'
 							connectionSocket.send(ret)
@@ -137,9 +139,9 @@ def main():
 							connectionSocket.send(ret)
 							connectionSocket.settimeout(30)
 							fileName = connectionSocket.recv(1024)
-							if findInDict(fileName , FileStorage[uName]):
+							if findInDict(fileName , FileStorage[userName]):
 								connectionSocket.settimeout(defaultTimeout)
-								fout = file('bin/'+uName+'/'+fileName , 'rb')
+								fout = file('bin/'+userName+'/'+fileName , 'rb')
 								fileLen = str(getFileSize(fout))
 								connectionSocket.send(fileLen)
 								rec = connectionSocket.recv(1024)
@@ -156,14 +158,14 @@ def main():
 		
 					##--Sends a list of the user's stored files--##
 					elif command == 'showfiles':
-						ret = getKeyString(FileStorage[uName])
+						ret = getKeyString(FileStorage[userName])
 						if ret == '':
 							ret = 'You have not uploaded any files'
 						connectionSocket.send(ret)
 		
 					##--Deletes a user's stored file--##
 					elif command == 'delfile':
-								ret = getKeyString(FileStorage[uName])
+								ret = getKeyString(FileStorage[userName])
 								if ret == '':
 									ret = 'You have not uploaded any files'
 									connectionSocket.send(ret)
@@ -172,8 +174,8 @@ def main():
 									connectionSocket.settimeout(30)
 									fileName = connectionSocket.recv(1024)
 									connectionSocket.settimeout(defaultTimeout)
-									os.remove('bin/'+uName+'/'+fileName)
-									del FileStorage[uName][fileName]
+									os.remove('bin/'+userName+'/'+fileName)
+									del FileStorage[userName][fileName]
 									connectionSocket.send('File deleted')
 
 					##--Tests connection and valid sessionID--##
@@ -225,16 +227,13 @@ def main():
 
 				else:
 					connectionSocket.send(cont)
-			except Exception , e:
-				print '\tError: ' + str(e)
-		
-		##--Exception acts as a safeguard in case something went wrong during transmition--##
-		else:
-			try:
+			
+			##--Exception acts as a safeguard in case something went wrong during transmition--##
+			else:
 				print 'Command error'
 				connectionSocket.send('Server did not recognise the command given')
-			except Exception , e:
-				print '\tError: ' + str(e)
+		except Exception , e:
+			print '\tError: ' + str(e)
 		
 		##--Close client connection--##
 		connectionSocket.close()

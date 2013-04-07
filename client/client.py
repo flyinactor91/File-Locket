@@ -10,7 +10,7 @@ import pickle
 aboutString = """
 File Locket
 Created by Michael duPont (flyinactor91@gmail.com)
-v1.0.0a [06 04 2013]
+v1.0.0a [07 04 2013]
 Python 2.7.3 - Unix
 
 Upgrades for future releases:
