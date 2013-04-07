@@ -122,43 +122,43 @@ def delFile(credentials , serverName , serverPort):
 		print 'Error: ' + str(e)
 
 def versioning(credentials , verCommand , userSets , serverName , serverPort):
-	#try:
-	clientSocket = socket(AF_INET , SOCK_STREAM)
-	clientSocket.connect((serverName , serverPort))
-	clientSocket.send(credentials+'&&&'+verCommand)
-	#Server checks if sessionID matches and sends list of files (if any)
-	ret = clientSocket.recv(1024)
-	print ret
-	if ret != 'You have not uploaded any files':
-		fileName = raw_input('\nFile: ')
-		if findInList(fileName , ret.split('\n')):
-			clientSocket.send(fileName)
-			#Server sends list of file versions
-			ret = clientSocket.recv(1024)
-			print ret
-			if verCommand != 'view':
-				verNum = int(raw_input('\nVersion number: '))-1
-				if verNum in range(len(ret.split('\n'))-1):
-					clientSocket.send(str(verNum))
-					fileLen = int(clientSocket.recv(1024))
-					fin = file(userSets['destdir'] + str(verNum+1) + '#' + fileName , 'wb')
-					finLen = 0 #current length of recieving file
-					clientSocket.send('send')
-					##--Recieve file of variable length--##
-					while finLen < fileLen:
-						line = clientSocket.recv(1024)
-						fin.write(line)
-						finLen = getFileSize(fin)
-					fin.close()
-					clientSocket.send('success')
-					print 'File recieved'
-				else:
-					print 'Not a version number'
-		else:
-			print 'Error: Not an available file'
-	clientSocket.close()
-	#except Exception , e:
-		#print 'Error: ' + str(e)
+	try:
+		clientSocket = socket(AF_INET , SOCK_STREAM)
+		clientSocket.connect((serverName , serverPort))
+		clientSocket.send(credentials+'&&&'+verCommand)
+		#Server checks if sessionID matches and sends list of files (if any)
+		ret = clientSocket.recv(1024)
+		print ret
+		if ret != 'You have not uploaded any files':
+			fileName = raw_input('\nFile: ')
+			if findInList(fileName , ret.split('\n')):
+				clientSocket.send(fileName)
+				#Server sends list of file versions
+				ret = clientSocket.recv(1024)
+				print ret
+				if verCommand != 'view':
+					verNum = int(raw_input('\nVersion number: '))-1
+					if verNum in range(len(ret.split('\n'))-1):
+						clientSocket.send(str(verNum))
+						fileLen = int(clientSocket.recv(1024))
+						fin = file(userSets['destdir'] + str(verNum+1) + '#' + fileName , 'wb')
+						finLen = 0 #current length of recieving file
+						clientSocket.send('send')
+						##--Recieve file of variable length--##
+						while finLen < fileLen:
+							line = clientSocket.recv(1024)
+							fin.write(line)
+							finLen = getFileSize(fin)
+						fin.close()
+						clientSocket.send('success')
+						print 'File recieved'
+					else:
+						print 'Not a version number'
+			else:
+				print 'Error: Not an available file'
+		clientSocket.close()
+	except Exception , e:
+		print 'Error: ' + str(e)
 
 ##--Called if no active user. Invokes login or startup--##
 def startUp(serverName , serverPort):
