@@ -10,14 +10,13 @@ import pickle
 aboutString = """
 File Locket
 Created by Michael duPont (flyinactor91@gmail.com)
-v1.0.0a [07 04 2013]
-Python 2.7.3 - Unix
+v1.1.0 [10 04 2013]
+Python 2.7.4 - Unix
 
 Upgrades for future releases:
 	Folder support
 	Up arrow yields previous entries
 	File encryption (user-held keys)
-	~~File versioning
 	User account support/authentication
 	Optional GUI (much later)
 """
@@ -44,7 +43,7 @@ noteString = """
 1.0.0 [28 03 2013]
 	Initial release
 
-1.x.x [x x x]
+1.1.0 [10 04 2013]
 	File versioning
 	Added source and destination directory control
 	File transfer improvements
@@ -86,7 +85,7 @@ def main():
 		print '\nWelcome back' , userName
 		sucBool = True
 	if sucBool:
-		print 'Program Info:  #about, #help, #notes'
+		print 'Program Info:  #about , #help , #notes'
 	else:
 		quitFlag = True
 		userName = ''
@@ -169,7 +168,6 @@ def main():
 			print 'Not a recognised command'
 		
 		##--End Command Loop--##
-		#clientSocket.close()
 	
 	##--Save userName and sessionID--##
 	storageFile = open('ClientStorage.pkl', 'wb')

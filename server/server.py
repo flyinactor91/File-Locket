@@ -2,12 +2,12 @@
 
 ##--File Locket (server)
 ##--Created by Michael duPont (flyinactor91@gmail.com)
-##--v1.0.0a [06 04 2013]
-##--Python 2.7.3 - Unix
+##--v1.1.0 [10 04 2013]
+##--Python 2.7.4 - Unix
 
 from serverCommands import *
 from socket import *
-import pickle , os , random , time
+import pickle , os , random , time , shutil
 
 ##--Main Server Function--##
 def main():
@@ -15,10 +15,12 @@ def main():
 	serverPort = 60145
 	###The current server password is 'letmein'. To change, run the saltHash function found in clientCommands on your new password and paste the output below
 	serverPassword = 'c4c98a50cf4abcd72737aff8679dc17b19a42eecb388c13133cd2de6685282578fe9c53320bae4b8b3ea88bf3e0079a35b4570bdfc81cad7cfb498f024b6fea3'
-	defaultTimeout = 5		#Timeout used for normal connection conditions
-	userInputTimeout = 30	#Timeout when response is needed to be typed by client
-	socketRecvBuffer = 1024 #2**x
-	maxConnectedClients = 10
+	defaultTimeout = 5			#  Timeout used for normal connection conditions
+	userInputTimeout = 30		#  Timeout when response is needed to be typed by client
+	socketRecvBuffer = 1024 	#  2**x
+	maxConnectedClients = 10	#  Number of simultaneous clients that the server will accept
+	outputToFile = True			#  Server log sent to .txt (True) or sent to terminal (False)
+	##--End settings--##
 	
 	##--Accepted commands--##
 	noCredCommands = ['signup' , 'login']
@@ -37,10 +39,13 @@ def main():
 		UserStorage = {}
 		FileStorage = {}
 	
+	if outputToFile: foutput = open('bin/serverLog.txt' , 'ab')
+	else: foutput = None
+	
 	serverSocket = socket(AF_INET , SOCK_STREAM)
 	serverSocket.bind(('' , serverPort))
 	serverSocket.listen(maxConnectedClients)
-	print 'The server is ready to recieve'
+	outputMsg(foutput , '\n\n'+time.strftime('%d:%m:%Y-%X')+'\nThe server is ready to recieve')
 	
 	##--Main Loop--##
 	quitFlag = False
@@ -59,13 +64,13 @@ def main():
 			if findInList(command , noCredCommands):
 				userName = stringIn[1]
 				pWord = stringIn[2]
-				print str(addr) , userName , command
+				outputMsg(foutput , str(addr)+'  '+userName+'  '+command)
 				
 				##--Server creates new folder and library entries and returns valid sessionID--##
 				if command == 'signup':
 					if findInDict(userName , UserStorage):
 						connectionSocket.send('Error: Username already exists')
-						print '\tusername failed'
+						outputMsg(foutput , '\tusername failed')
 					else:
 						sessionID = str(random.randint(0 , 10**6))
 						UserStorage[userName] = [pWord , sessionID]
@@ -84,17 +89,17 @@ def main():
 							connectionSocket.send('Login successful:' + sessionID)
 						else:
 							connectionSocket.send('Error: Password does not match')
-							print '\tpassword failed'
+							outputMsg(foutput , '\tpassword failed')
 					else:
 						connectionSocket.send('Error: Username does not exist')
-						print '\tusername failed'
+						outputMsg(foutput , '\tusername failed')
 			
 			##--Requires username and sessionID--##
 			elif findInList(command , credCommands):
 				userName = stringIn[1]
 				sessionID = stringIn[2]
-				print str(addr) , userName , command
-				cont = checkCreds(userName , sessionID , UserStorage)
+				outputMsg(foutput , str(addr)+'  '+userName+'  '+command)
+				cont = checkCreds(userName , sessionID , UserStorage , foutput)
 				if cont == 'Y':
 					
 					##--Server recieves file and stores in user's folder--##
@@ -120,20 +125,20 @@ def main():
 										finVer.write(line)
 										finLen = getFileSize(fin)
 								fin.close()
+								finVer.close()
 								checksum = hashFile(open('bin/'+userName+'/'+fileName , 'rb') , hashlib.sha512())
 								FileStorage[userName][fileName][0] = timeString
 								FileStorage[userName][fileName][1] = checksum
 								FileStorage[userName][fileName][2].append(timeString)
-								#print FileStorage[userName][fileName][2][len(FileStorage[userName][fileName][2])-1]
 								connectionSocket.send('File received')
-								print '\t' + fileName + '  success'
+								outputMsg(foutput , '\t' + fileName + '  success')
 							except Exception , e:
 								connectionSocket.send('File Save Error: ' + str(e))
-								print '\t' + fileName + '  Error: ' + str(e)
+								outputMsg(foutput , '\t' + fileName + '  Error: ' + str(e))
 		
 					##--Sends the requested file to the user--##
 					elif command == 'getfile':
-						ret = getKeyString(FileStorage[userName])
+						ret = getKeyString(FileStorage[userName] , '\n')
 						if ret == '':
 							ret = 'You have not uploaded any files'
 							connectionSocket.send(ret)
@@ -152,22 +157,22 @@ def main():
 									for line in outputData:
 										sent = connectionSocket.send(line)
 									rec = connectionSocket.recv(socketRecvBuffer)
-									print '\t' + fileName + '  ' + rec
+									outputMsg(foutput , '\t' + fileName + '  ' + rec)
 								else:
-									print '\t' + fileName + '  Error: recieve'
+									outputMsg(foutput , '\t' + fileName + '  Error: recieve')
 							else:
-								print '\t' + fileName + '  Error: not found'
+								outputMsg(foutput , '\t' + fileName + '  Error: not found')
 		
 					##--Sends a list of the user's stored files--##
 					elif command == 'viewfiles':
-						ret = getKeyString(FileStorage[userName])
+						ret = getKeyString(FileStorage[userName] , '\n')
 						if ret == '':
 							ret = 'You have not uploaded any files'
 						connectionSocket.send(ret)
 		
-					##--Deletes a user's stored file--##
+					##--Deletes a user's stored file and versions--##
 					elif command == 'delfile':
-						ret = getKeyString(FileStorage[userName])
+						ret = getKeyString(FileStorage[userName] , '\n')
 						if ret == '':
 							ret = 'You have not uploaded any files'
 							connectionSocket.send(ret)
@@ -178,15 +183,16 @@ def main():
 							connectionSocket.settimeout(defaultTimeout)
 							if findInDict(fileName , FileStorage[userName]):
 								os.remove('bin/'+userName+'/'+fileName)
+								shutil.rmtree('bin/'+userName+'/.fileversions/'+fileName)
 								del FileStorage[userName][fileName]
 								connectionSocket.send('File deleted')
 							else:
-								print '\t' + fileName + '  Error: not found'
+								outputMsg(foutput , '\t' + fileName + '  Error: not found')
 
-					##--Deletes a user's stored file--##
+					##--Lets user view and download previous file versions--##
 					elif command == 'versions':
 						verCommand = stringIn[3]
-						ret = getKeyString(FileStorage[userName])
+						ret = getKeyString(FileStorage[userName] , '\n')
 						if ret == '':
 							ret = 'You have not uploaded any files'
 							connectionSocket.send(ret)
@@ -209,13 +215,13 @@ def main():
 											for line in outputData:
 												sent = connectionSocket.send(line)
 											rec = connectionSocket.recv(socketRecvBuffer)
-											print '\t' + fileName + ' ' + verNum + '  ' + rec
+											outputMsg(foutput , '\t' + fileName + '  ' + verNum + '  ' + rec)
 										else:
-											print '\t' + fileName + '  Error'
+											outputMsg(foutput , '\t' + fileName + '  Error')
 									else:
-										print '\t' + fileName + '  Error: not a version number'
+										outputMsg(foutput , '\t' + fileName + '  Error: not a version number')
 							else:
-								print '\t' + fileName + '  Error: file not found'
+								outputMsg(foutput , '\t' + fileName + '  Error: file not found')
 
 					##--Tests connection and valid sessionID--##
 					elif command == 'test':
@@ -229,7 +235,7 @@ def main():
 							connectionSocket.send('Server is now shutting down')
 							quitFlag = True
 						else:
-							print '\tincorrect password'
+							outputMsg(foutput , '\tincorrect password')
 							connectionSocket.send('Error: Access Denied')
 		
 					##--Clears all server data--##
@@ -243,25 +249,22 @@ def main():
 								FileStorage.clear()
 								connectionSocket.send('Server has reset all storage.')
 							except OSError:
-								print '\tbin backup still exists'
+								outputMsg(foutput , '\tbin backup still exists')
 								connectionSocket.send('Error: Previous bin backup still exists')
 							except:
-								print '\terror'
+								outputMsg(foutput , '\terror')
 								connectionSocket.send('Error: Unknown')
 						else:
-							print '\tincorrect password'
+							outputMsg(foutput , '\tincorrect password')
 							connectionSocket.send('Access Denied')
 		
 					##--Returns all usernames in UserStorage--##
 					elif command == 'adminshowusers':
 						password = stringIn[3]
 						if password == serverPassword:
-							retString = '\nUsernames Stored on Server:'
-							for key in UserStorage:
-								retString += '\n\t' + key
-							connectionSocket.send(retString)
+							connectionSocket.send('\nUsernames Stored on Server:' + getKeyString(UserStorage , '\n\t'))
 						else:
-							print '\tincorrect password'
+							outputMsg(foutput , '\tincorrect password')
 							connectionSocket.send('Access Denied')
 
 				else:
@@ -269,10 +272,10 @@ def main():
 			
 			##--Exception acts as a safeguard in case something went wrong during transmition--##
 			else:
-				print 'Command error'
+				outputMsg(foutput , 'Command error')
 				connectionSocket.send('Server did not recognise the command given')
 		except Exception , e:
-			print '\tError: ' + str(e)
+			outputMsg(foutput , '\tError: ' + str(e))
 		
 		##--Close client connection--##
 		connectionSocket.close()
@@ -283,8 +286,10 @@ def main():
 		pickle.dump(FileStorage, storageFile)
 		storageFile.close()
 		##--End Main Loop--##
-	
+		
+	if outputToFile:
+		foutput.close()
 	serverSocket.close()
-##--End main--##
+	##--End main--##
 
 main()

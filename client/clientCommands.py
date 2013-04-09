@@ -30,27 +30,27 @@ def sendFile(credentials , userSets , serverName , serverPort):
 			fileName = raw_input('What file would you like to send?: ')
 			if fileName.find('&&&') != -1: print "Because of how request data is sent to the server, the file name cannot contain '&&&'"
 		fout = open(userSets['senddir'] + fileName , 'rb')
-		clientSocket = socket(AF_INET , SOCK_STREAM)
-		clientSocket.connect((serverName , serverPort))
 		##--Get file name if input points to another dir
 		if fileName.find('/') != -1:
 			fileName = fileName[fileName.rfind('/')+1:]
 		fileLen = str(getFileSize(fout))
-		checksum = hashFile(fout , hashlib.sha512())
-		DATA = credentials + '&&&' + fileName + '&&&' + checksum + '&&&' + fileLen
-		sent = clientSocket.send(DATA)
-		#Server checks if sessionID matches and preps file for contents
-		rec = clientSocket.recv(1024)
-		if rec == 'Connection successful':
-			##--Send file contents--##
-			outputData = fout.readlines()
-			for line in outputData:
-				sent = clientSocket.send(line)
-				if sent == 0:
-					raise RuntimeError('socket connection broken')
+		if fileLen == 0: print 'Server will not accept empty files'
+		else:
+			checksum = hashFile(fout , hashlib.sha512())
+			DATA = credentials + '&&&' + fileName + '&&&' + checksum + '&&&' + fileLen
+			clientSocket = socket(AF_INET , SOCK_STREAM)
+			clientSocket.connect((serverName , serverPort))
+			sent = clientSocket.send(DATA)
+			#Server checks if sessionID matches and preps file for contents
 			rec = clientSocket.recv(1024)
-		print rec
-		clientSocket.close()
+			if rec == 'Connection successful':
+				##--Send file contents--##
+				outputData = fout.readlines()
+				for line in outputData:
+					sent = clientSocket.send(line)
+				rec = clientSocket.recv(1024)
+			print rec
+			clientSocket.close()
 	except Exception , e:
 		print 'Error: ' + str(e)
 
@@ -230,7 +230,7 @@ def signUp(serverName , serverPort):
 
 ##--Change user setting dictionary--##
 def settings(command , userSets):
-	if len(command) == 1: print '\nset [var] (value)\nClear var value with #clear\nVariables that can be set:' + getKeyString(userSets)
+	if len(command) == 1: print '\nset [var] (value)\nClear var value with #clear\nVariables that can be set:' + getKeyString(userSets , '\n')
 	elif findInDict(command[1] , userSets):
 		if len(command) == 2:
 			setVal = userSets[command[1]]
@@ -294,10 +294,10 @@ def findInDict(string , dic):
 		return False
 
 ##--Returns a formatted string of dictionary keys--##
-def getKeyString(dic):
+def getKeyString(dic , strsep):
 	ret = ''
 	for key in dic:
-		ret += '\t\n' + key
+		ret += strsep + key
 	return ret
 
 ##--Returns checksum for given file using given hash--##
