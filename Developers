@@ -1,0 +1,25 @@
+File Locket
+Created by Michael duPont (flyinactor91@gmail.com)
+v1.1.0a [11 04 2013]
+Python 2.7.4 - Unix
+
+A brief overview of data structures and improvements/issues
+
+
+Client:
+userSets = {'senddir':locationString , 'destdir':locationString}
+Storage pickle save/load order: userName, sessionID, userSets
+File encryption would be implemented with client-side keys before transmission
+--Currently trying to work out how to store key-derivation on server for when client logs into a new session
+Up arrow yields previous text entries
+--Trying to find module to replace raw_input that works with arrow key keyboard event
+
+
+Server:
+UserStorage = { username : [encrypted password , current sessionID] , ...}
+FileStorage = { username : { filename : [datetime uploaded , checksum , [list of version datetimes]] , ...} , ...}
+Folder support is tricky due to viewfile lists and how file versioning is set up
+Scaling will be a problem
+--Search algorithms are O(N) --major problem
+--No inherent multithreading, serves only one user at a time (untested for multiple-user large file transfers)
+Account authentication would come through email with server-generated random string for user to send to server

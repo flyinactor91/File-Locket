@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ##--Function order:
-##--Main functions: sendData , sendFile , getFile , showFiles , delFile , versioning , startUp , login , signUp , settings , admin
+##--Main functions: sendData , sendFile , getFile , showFiles , delFile , versioning , archive , startUp , login , signUp , settings , admin
 ##--Minor functions: saltHash , getFileSize , findInList , findInDict , getKeyString , hashFile
 
 from socket import *
@@ -160,6 +160,28 @@ def versioning(credentials , verCommand , userSets , serverName , serverPort):
 	except Exception , e:
 		print 'Error: ' + str(e)
 
+##--Recieves a zip archive containing all uploaded files--##
+def archive(credentials , userSets , serverName , serverPort):
+	try:
+		clientSocket = socket(AF_INET , SOCK_STREAM)
+		clientSocket.connect((serverName , serverPort))
+		clientSocket.send(credentials)
+		#Server checks if sessionID matches and prepares zip archive to be sent
+		fileLen = int(clientSocket.recv(1024))
+		fin = file(userSets['destdir'] + 'archive.zip' , 'wb')
+		finLen = 0 #current length of recieving file
+		clientSocket.send('send')
+		##--Recieve file of variable length--##
+		while finLen < fileLen:
+			line = clientSocket.recv(1024)
+			fin.write(line)
+			finLen = getFileSize(fin)
+		fin.close()
+		clientSocket.send('success')
+		print 'File recieved'
+	except Exception , e:
+		print 'Error: ' + str(e)
+
 ##--Called if no active user. Invokes login or startup--##
 def startUp(serverName , serverPort):
 	lin = ''
@@ -175,15 +197,14 @@ def login(serverName , serverPort):
 		userName = ''
 		password = ''
 		##--Username and password must be 8+ chars and not contain &&& --##
-		while len(userName) < 8 or userName.find('&&&') != -1:
+		while len(userName) < 8 or userName.find('&') != -1:
 			userName = raw_input('Username : ')
 			if len(userName) < 8: print 'Username is not long enough'
-			if userName.find('&&&') != -1: print 'Not an acceptable username'
-		while len(password) < 8 or password.find('&&&') != -1:
+			if userName.find('&') != -1: print 'Do to the way this program talks with the server, your username cannot contain "&"'
+		while len(password) < 8 or password.find('&') != -1:
 			password = getpass.getpass('Password : ')
 			if len(password) < 8: print 'Password is not long enough'
-			if password.find('&&&') != -1: print 'Not an acceptable password'
-			
+			if password.find('&') != -1: print 'Do to the way this program talks with the server, your password cannot contain "&"'
 		password = saltHash(password , userName) #Encrypt password
 		resp = sendData('login' + '&&&' + userName + '&&&' + password , serverName , serverPort)
 		if type(resp) == type(None): return '' , False , '' #Checks if sendData raised an exception
@@ -205,15 +226,14 @@ def signUp(serverName , serverPort):
 		password = ''
 		print 'Both username and password must be at least 8 characters long'
 		##--Username and password must be 8+ chars and not contain &&& --##
-		while len(userName) < 8 or userName.find('&&&') != -1:
+		while len(userName) < 8 or userName.find('&') != -1:
 			userName = raw_input('userName : ')
 			if len(userName) < 8: print 'Username is not long enough'
-			if userName.find('&&&') != -1: print 'Not an acceptable username'
-		while len(password) < 8 or password.find('&&&') != -1:
+			elif userName.find('&') != -1: print 'Do to the way this program talks with the server, your username cannot contain "&"'
+		while len(password) < 8 or password.find('&') != -1:
 			password = getpass.getpass('Password : ')
 			if len(password) < 8: print 'Password is not long enough'
-			if password.find('&&&') != -1: print 'Not an acceptable password'
-			
+			elif password.find('&') != -1: print 'Do to the way this program talks with the server, your password cannot contain "&"'
 		password = saltHash(password , userName) #Encrypt password
 		resp = sendData('signup' + '&&&' + userName + '&&&' + password , serverName , serverPort)
 		if type(resp) == type(None): return '' , False , '' #Checks if sendData raised an exception
@@ -242,6 +262,7 @@ def settings(command , userSets):
 				command[2] = ''
 			elif command[1] == 'senddir' or command[1] == 'destdir':
 				if command[2][:1] == '~': command[2] = os.path.expanduser(command[2])
+				elif command[2][:3] == 'cwd': command[2] = command[2].replace('cwd' , os.getcwd() , 1)
 				if command[2][:len(command[2])] != '/' and command[2] != '': command[2] += '/'
 				if not os.path.isdir(command[2]):
 					print command[2] + ' is not a directory'

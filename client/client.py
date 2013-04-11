@@ -13,12 +13,9 @@ Created by Michael duPont (flyinactor91@gmail.com)
 v1.1.0 [10 04 2013]
 Python 2.7.4 - Unix
 
-Upgrades for future releases:
-	Folder support
-	Up arrow yields previous entries
-	File encryption (user-held keys)
-	User account support/authentication
-	Optional GUI (much later)
+Simple file storage service
+Store, access, and delete files
+Files are versioned and can be downloaded
 """
 
 helpString = """
@@ -28,6 +25,7 @@ Available commands:
 	viewfiles		View stored files
 	delfile			Delete a file on the server
 	versions		File version options
+	archive			Get all files on server
 	set			Change program settings
 	test			Test server connection
 	logout			Logout and quit
@@ -45,8 +43,12 @@ noteString = """
 
 1.1.0 [10 04 2013]
 	File versioning
-	Added source and destination directory control
+	Source and destination directory control
 	File transfer improvements
+	Server improvements
+
+1.1.0a [11 04 2013]
+	Recieve file archive
 	Server improvements
 """
 
@@ -121,6 +123,10 @@ def main():
 					versioning(credentials , verCommand , userSets , serverName , serverPort)
 				else:
 					print 'Not a recognised command'
+		
+		##--Get all files stored on the server--##
+		elif command == 'archive':
+			archive(credentials , userSets , serverName , serverPort)
 		
 		##--Change user settings--##
 		elif command.split(' ')[0] == 'set':

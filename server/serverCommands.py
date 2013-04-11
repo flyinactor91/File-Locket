@@ -1,8 +1,8 @@
 #!/usr/bin/python
 
-##--Function order: findInDict , findInList , getKeyString , getFileSize , checkCreds , hashFile , outputMsg
+##--Function order: findInDict , findInList , getKeyString , getFileSize , checkCreds , hashFile , outputMsg , makeZip
 
-import hashlib
+import hashlib , os , zipfile
 
 ##--Returns True if string is a valid key in given dictionary--##
 def findInDict(string , dic):
@@ -44,8 +44,8 @@ def getFileSize(fileObj):
 	fileObj.seek(curpos)
 	return ret
 
-##--Checks if userName and sessionID are both valid--##
-def checkCreds(userName , sessionID , dic , foutput):
+##--Depricated ~~~ Checks if userName and sessionID are both valid--##
+def checkCredsDepr(userName , sessionID , dic , foutput):
 	if findInDict(userName , dic):
 		if dic[userName][1] == sessionID:
 			return 'Y'
@@ -56,18 +56,41 @@ def checkCreds(userName , sessionID , dic , foutput):
 		outputMsg(foutput , '\tusername failed')
 		return 'Error: Username does not exist'
 
+##--Checks if userName and sessionID are both valid--##
+def checkCreds(userName , sessionsID , dic , foutput):
+	try:
+		if dic[userName][1] == sessionID: return 'Y'
+		else:
+			outputMsg(foutput , '\tseesionID failed')
+			return 'Error: SessionID does not match. You may have logged into another device more recently. For security reasons, please logout and login again.'
+	except:
+		outputMsg(foutput , '\tusername failed')
+		return 'Error: Username does not exist'
+
 ##--Returns checksum for given file using given hash--##
 ##Ex:  hashfile(open(fileName, 'rb'), hashlib.sha256())   must be in r mode
-def hashFile(afile , hasher , blocksize=65536):
-    buf = afile.read(blocksize)
+def hashFile(fileObj , hasher , blocksize=65536):
+    buf = fileObj.read(blocksize)
     while len(buf) > 0:
         hasher.update(buf)
-        buf = afile.read(blocksize)
+        buf = fileObj.read(blocksize)
     return hasher.digest()
 
 ##--Writes a string to a file if one is open or the console if one is not--##
-def outputMsg(afile , msg):
+def outputMsg(fileObj , msg):
 	try:
-		afile.write(msg+'\n')
+		fileObj.write(msg+'\n')
 	except:
 		print msg
+
+##--Creates zip archive of folder contents, excludes hidden files--##
+##Ex:  makeZip(userName+'.zip' , 'bin/'+userName)
+def makeZip(name , dirloc=''):
+	if dirloc != '':
+		dirloc += '/'
+	cwd = os.getcwd()+'/'+dirloc
+	zippy = zipfile.ZipFile(cwd+name , 'w')
+	for fileName in os.listdir(cwd):
+		if fileName != name and fileName[:1] != '.' and fileName[len(fileName)-1:] != '~':
+			zippy.write(dirloc+fileName)
+	zippy.close()
