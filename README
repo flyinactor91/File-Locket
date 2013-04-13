@@ -1,6 +1,6 @@
 File Locket
 Created by Michael duPont (flyinactor91@gmail.com)
-v1.1.0a [11 04 2013]
+v1.1.0a [13 04 2013]
 Python 2.7.4 - Unix
 
 Overview:
@@ -15,9 +15,7 @@ User can set different send and dest folders for files to/from server
 --Defauts to curdir but saves send/dest between sessions
 
 Server:
-Files stored on the server do not undergo further encryption
---File encryption on the list to implement
-Storage pickle save/load order: UserStorage, FileStorage
+File encryption on the list to implement
 Database stored as two dictionaries and saved between command loops
 Server log is recorded into .txt (default) or to the terminal
 
@@ -26,7 +24,6 @@ Passwords are salted and hashed client side so server never sees the plain text
 All password entry doesn't show text in terminal
 User's sessionID changes upon new login -> user can only transmit new commands on one machine at a time
 --Large file upload will continue even if user moves to new terminal changing sessionID
-Option to change password will not be added until user authentication
 
 Admin tools:
 Client asked for admin password which must match encrypted server password
@@ -49,7 +46,7 @@ Available commands:
 	showfiles		Show stored files
 	delfile			Delete a file on the server
 	versions		File version options
-	archive			Get all files on server
+	archive	(true)		Get all files on server (versions if true)
 	set			Change program settings
 	test			Test server connection
 	logout			Logout and quit
@@ -73,6 +70,6 @@ Source and destination directory control
 File transfer improvements
 Server improvements
 
-1.1.0a [11 04 2013]
+1.1.0a [13 04 2013]
 Recieve file archive
-Server improvements
+Client and Server improvements

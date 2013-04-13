@@ -10,7 +10,7 @@ import pickle
 aboutString = """
 File Locket
 Created by Michael duPont (flyinactor91@gmail.com)
-v1.1.0 [10 04 2013]
+v1.1.0a [13 04 2013]
 Python 2.7.4 - Unix
 
 Simple file storage service
@@ -24,8 +24,8 @@ Available commands:
 	getfile			Get a file from the server
 	viewfiles		View stored files
 	delfile			Delete a file on the server
-	versions		File version options
-	archive			Get all files on server
+	versions	 	File version options
+	archive	(true)	Get all files on server (versions if true)
 	set			Change program settings
 	test			Test server connection
 	logout			Logout and quit
@@ -47,9 +47,9 @@ noteString = """
 	File transfer improvements
 	Server improvements
 
-1.1.0a [11 04 2013]
+1.1.0a [13 04 2013]
 	Recieve file archive
-	Server improvements
+	Client and Server improvements
 """
 
 ##--Main Client Function--##
@@ -125,8 +125,11 @@ def main():
 					print 'Not a recognised command'
 		
 		##--Get all files stored on the server--##
-		elif command == 'archive':
-			archive(credentials , userSets , serverName , serverPort)
+		elif command.split(' ')[0] == 'archive':
+			if len(command.split(' ')) != 2:
+				archive(credentials+'&&&' , userSets , serverName , serverPort)
+			else:
+				archive(credentials+'&&&T' , userSets , serverName , serverPort)
 		
 		##--Change user settings--##
 		elif command.split(' ')[0] == 'set':

@@ -2,7 +2,7 @@
 
 ##--File Locket (server)
 ##--Created by Michael duPont (flyinactor91@gmail.com)
-##--v1.1.0a [11 04 2013]
+##--v1.1.0a [13 04 2013]
 ##--Python 2.7.4 - Unix
 
 from serverCommands import *
@@ -61,14 +61,14 @@ def main():
 		##--Command Rec--##
 		
 		##--Requires username and password--##
-		if findInList(command , noCredCommands):
+		if command in noCredCommands:
 			userName = stringIn[1]
 			pWord = stringIn[2]
 			outputMsg(foutput , str(addr)+'  '+userName+'  '+command)
 			
 			##--Server creates new folder and library entries and returns valid sessionID--##
 			if command == 'signup':
-				if findInDict(userName , UserStorage):
+				if userName in UserStorage:
 					connectionSocket.send('Error: Username already exists')
 					outputMsg(foutput , '\tusername failed')
 				else:
@@ -82,7 +82,7 @@ def main():
 			
 			##--Server returns valid sessionID--##
 			elif command == 'login':
-				if findInDict(userName , UserStorage):
+				if userName in UserStorage:
 					if UserStorage[userName][0] == pWord:
 						sessionID = str(random.randint(0 , 10**6))
 						UserStorage[userName][1] = sessionID
@@ -95,7 +95,7 @@ def main():
 					outputMsg(foutput , '\tusername failed')
 		
 		##--Requires username and sessionID--##
-		elif findInList(command , credCommands):
+		elif command in credCommands:
 			userName = stringIn[1]
 			sessionID = stringIn[2]
 			outputMsg(foutput , str(addr)+'  '+userName+'  '+command)
@@ -106,7 +106,7 @@ def main():
 				if command == 'sendfile':
 					fileName = stringIn[3]
 					recvChecksum = stringIn[4]
-					if findInDict(fileName , FileStorage[userName]) and FileStorage[userName][fileName][1] == recvChecksum:
+					if fileName in FileStorage[userName] and FileStorage[userName][fileName][0] == recvChecksum:
 						connectionSocket.send('File has not changed since last upload')
 					else:
 						connectionSocket.send('Connection successful')
@@ -117,8 +117,8 @@ def main():
 							fin = file('bin/'+userName+'/'+fileName , 'wb')
 							if not os.path.isdir('bin/'+userName+'/.fileversions/'+fileName):
 								os.mkdir((os.getcwd())+'/bin/'+userName+'/.fileversions/'+fileName)
-								FileStorage[userName][fileName] = ['','',[]]
-							finVer = file('bin/'+userName+'/.fileversions/'+fileName+'/'+str(len(FileStorage[userName][fileName][2]))+'&&&'+fileName , 'wb')
+								FileStorage[userName][fileName] = ['',[]]
+							finVer = file('bin/'+userName+'/.fileversions/'+fileName+'/'+str(len(FileStorage[userName][fileName][1]))+'&&&'+fileName , 'wb')
 							while finLen < fileLen:
 									line = connectionSocket.recv(socketRecvBuffer)
 									fin.write(line)
@@ -127,9 +127,8 @@ def main():
 							fin.close()
 							finVer.close()
 							checksum = hashFile(open('bin/'+userName+'/'+fileName , 'rb') , hashlib.sha512())
-							FileStorage[userName][fileName][0] = timeString
-							FileStorage[userName][fileName][1] = checksum
-							FileStorage[userName][fileName][2].append(timeString)
+							FileStorage[userName][fileName][0] = checksum
+							FileStorage[userName][fileName][1].append(timeString)
 							connectionSocket.send('File received')
 							outputMsg(foutput , '\t' + fileName + '  success')
 						except Exception , e:
@@ -144,9 +143,9 @@ def main():
 						connectionSocket.send(ret)
 					else:
 						connectionSocket.send(ret)
-						connectionSocket.settimeout(30)
+						connectionSocket.settimeout(userInputTimeout)
 						fileName = connectionSocket.recv(socketRecvBuffer)
-						if findInDict(fileName , FileStorage[userName]):
+						if fileName in FileStorage[userName]:
 							connectionSocket.settimeout(defaultTimeout)
 							fout = file('bin/'+userName+'/'+fileName , 'rb')
 							fileLen = str(getFileSize(fout))
@@ -181,7 +180,7 @@ def main():
 						connectionSocket.settimeout(userInputTimeout)
 						fileName = connectionSocket.recv(socketRecvBuffer)
 						connectionSocket.settimeout(defaultTimeout)
-						if findInDict(fileName , FileStorage[userName]):
+						if fileName in FileStorage[userName]:
 							os.remove('bin/'+userName+'/'+fileName)
 							shutil.rmtree('bin/'+userName+'/.fileversions/'+fileName)
 							del FileStorage[userName][fileName]
@@ -200,8 +199,8 @@ def main():
 						connectionSocket.send(ret)
 						connectionSocket.settimeout(userInputTimeout)
 						fileName = connectionSocket.recv(socketRecvBuffer)
-						if findInDict(fileName , FileStorage[userName]):
-							connectionSocket.send(getNumListString(FileStorage[userName][fileName][2]))
+						if fileName in FileStorage[userName]:
+							connectionSocket.send(getNumListString(FileStorage[userName][fileName][1]))
 							if verCommand != 'view':
 								verNum = connectionSocket.recv(socketRecvBuffer)
 								connectionSocket.settimeout(defaultTimeout)
@@ -224,8 +223,8 @@ def main():
 							outputMsg(foutput , '\t' + fileName + '  Error: file not found')
 
 				elif command == 'archive':
-					makeZip(userName+'.zip' , 'bin/'+userName)
-					fout = file('bin/'+userName+'/'+userName+'.zip' , 'rb')
+					makeZip(userName , 'bin/'+userName , stringIn[3])
+					fout = file(userName+'.zip' , 'rb')
 					fileLen = str(getFileSize(fout))
 					connectionSocket.send(fileLen)
 					rec = connectionSocket.recv(socketRecvBuffer)
@@ -234,7 +233,7 @@ def main():
 						for line in outputData:
 							sent = connectionSocket.send(line)
 						rec = connectionSocket.recv(socketRecvBuffer)
-						os.remove('bin/'+userName+'/'+userName+'.zip')
+						os.remove(userName+'.zip')
 					else:
 						outputMsg(foutput , '\tError')
 						
@@ -262,6 +261,9 @@ def main():
 							os.mkdir('bin')
 							UserStorage.clear()
 							FileStorage.clear()
+							if outputToFile: foutput = open('bin/serverLog.txt' , 'ab')
+							else: foutput = None
+							outputMsg(foutput , '\n\n'+time.strftime('%d:%m:%Y-%X')+'\nThe server is ready to recieve after adminclear')
 							connectionSocket.send('Server has reset all storage.')
 						except OSError:
 							outputMsg(foutput , '\tbin backup still exists')
@@ -287,7 +289,7 @@ def main():
 		
 		##--Exception acts as a safeguard in case something went wrong during transmition--##
 		else:
-			outputMsg(foutput , 'Command error')
+			outputMsg(foutput , str(addr)+'  Command error')
 			connectionSocket.send('Server did not recognise the command given')
 		#except Exception , e:
 			#outputMsg(foutput , '\tError: ' + str(e))

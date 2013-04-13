@@ -2,7 +2,7 @@
 
 ##--Function order:
 ##--Main functions: sendData , sendFile , getFile , showFiles , delFile , versioning , archive , startUp , login , signUp , settings , admin
-##--Minor functions: saltHash , getFileSize , findInList , findInDict , getKeyString , hashFile
+##--Minor functions: saltHash , getFileSize , getKeyString , hashFile
 
 from socket import *
 import hashlib , getpass , os
@@ -66,7 +66,7 @@ def getFile(credentials , userSets , serverName , serverPort):
 		if ret != 'You have not uploaded any files':
 			ret = ret.split('\n') #Create searchable list from file names
 			fileName = raw_input('\nFile: ')
-			if findInList(fileName , ret):
+			if fileName in ret:
 				clientSocket.send(fileName)
 				fileLen = int(clientSocket.recv(1024))
 				fin = file(userSets['destdir'] + fileName , 'wb')
@@ -112,7 +112,7 @@ def delFile(credentials , serverName , serverPort):
 			print ''
 			ret = ret.split('\n') #Create searchable list from file names
 			fileName = raw_input('File: ')
-			if findInList(fileName , ret):
+			if fileName in ret:
 				clientSocket.send(fileName)
 				print clientSocket.recv(1024)
 			else:
@@ -131,7 +131,7 @@ def versioning(credentials , verCommand , userSets , serverName , serverPort):
 		print ret
 		if ret != 'You have not uploaded any files':
 			fileName = raw_input('\nFile: ')
-			if findInList(fileName , ret.split('\n')):
+			if fileName in ret.split('\n'):
 				clientSocket.send(fileName)
 				#Server sends list of file versions
 				ret = clientSocket.recv(1024)
@@ -161,11 +161,11 @@ def versioning(credentials , verCommand , userSets , serverName , serverPort):
 		print 'Error: ' + str(e)
 
 ##--Recieves a zip archive containing all uploaded files--##
-def archive(credentials , userSets , serverName , serverPort):
+def archive(DATA , userSets , serverName , serverPort):
 	try:
 		clientSocket = socket(AF_INET , SOCK_STREAM)
 		clientSocket.connect((serverName , serverPort))
-		clientSocket.send(credentials)
+		clientSocket.send(DATA)
 		#Server checks if sessionID matches and prepares zip archive to be sent
 		fileLen = int(clientSocket.recv(1024))
 		fin = file(userSets['destdir'] + 'archive.zip' , 'wb')
@@ -251,7 +251,7 @@ def signUp(serverName , serverPort):
 ##--Change user setting dictionary--##
 def settings(command , userSets):
 	if len(command) == 1: print '\nset [var] (value)\nClear var value with #clear\nVariables that can be set:' + getKeyString(userSets , '\n')
-	elif findInDict(command[1] , userSets):
+	elif command[1] in userSets:
 		if len(command) == 2:
 			setVal = userSets[command[1]]
 			if setVal == '':
@@ -295,24 +295,6 @@ def getFileSize(fileObj):
 	ret = fileObj.tell()
 	fileObj.seek(curpos)
 	return ret
-
-##--Returns True if value is found in given list--##
-def findInList(item , listObj):
-	try:
-		for i in listObj:
-			if i == item: return True
-		return False
-	except:
-		return False
-
-##--Returns True if string is a valid key in given dictionary--##
-def findInDict(string , dic):
-	try:
-		for key in dic:
-			if key == string: return True
-		return False
-	except:
-		return False
 
 ##--Returns a formatted string of dictionary keys--##
 def getKeyString(dic , strsep):

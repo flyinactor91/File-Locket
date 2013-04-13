@@ -1,26 +1,8 @@
 #!/usr/bin/python
 
-##--Function order: findInDict , findInList , getKeyString , getFileSize , checkCreds , hashFile , outputMsg , makeZip
+##--Function order: getKeyString , getFileSize , checkCreds , hashFile , outputMsg , makeZip
 
-import hashlib , os , zipfile
-
-##--Returns True if string is a valid key in given dictionary--##
-def findInDict(string , dic):
-	try:
-		for key in dic:
-			if key == string: return True
-		return False
-	except:
-		return False
-
-##--Returns True if value is found in given list--##
-def findInList(item , listObj):
-	try:
-		for i in listObj:
-			if i == item: return True
-		return False
-	except:
-		return False
+import hashlib , os , shutil , zipfile
 
 ##--Returns a formatted string of dictionary keys--##
 def getKeyString(dic , strsep):
@@ -31,7 +13,7 @@ def getKeyString(dic , strsep):
 
 ##--Returns a formatted string of numbered list elements (for versioning)--##
 def getNumListString(lst):
-	ret = ''
+	ret = '\nVer dd:mm:yyyy-hh:mm:ss\n'
 	for num in range(len(lst)):
 		ret += '\n' + str(num+1) + '.  ' + str(lst[num])
 	return ret
@@ -44,24 +26,12 @@ def getFileSize(fileObj):
 	fileObj.seek(curpos)
 	return ret
 
-##--Depricated ~~~ Checks if userName and sessionID are both valid--##
-def checkCredsDepr(userName , sessionID , dic , foutput):
-	if findInDict(userName , dic):
-		if dic[userName][1] == sessionID:
-			return 'Y'
-		else:
-			outputMsg(foutput , '\tseesionID failed')
-			return 'Error: SessionID does not match. You may have logged into another device more recently. For security reasons, please logout and login again.'
-	else:
-		outputMsg(foutput , '\tusername failed')
-		return 'Error: Username does not exist'
-
 ##--Checks if userName and sessionID are both valid--##
-def checkCreds(userName , sessionsID , dic , foutput):
+def checkCreds(userName , sessionID , dic , foutput):
 	try:
 		if dic[userName][1] == sessionID: return 'Y'
 		else:
-			outputMsg(foutput , '\tseesionID failed')
+			outputMsg(foutput , '\tsessionID failed')
 			return 'Error: SessionID does not match. You may have logged into another device more recently. For security reasons, please logout and login again.'
 	except:
 		outputMsg(foutput , '\tusername failed')
@@ -83,14 +53,20 @@ def outputMsg(fileObj , msg):
 	except:
 		print msg
 
-##--Creates zip archive of folder contents, excludes hidden files--##
-##Ex:  makeZip(userName+'.zip' , 'bin/'+userName)
-def makeZip(name , dirloc=''):
+##--Creates zip archive of folder contents--##
+##Ex:  makeZip(userName , 'bin/'+userName)
+def makeZip(name , dirloc='' , allFiles = False):
 	if dirloc != '':
 		dirloc += '/'
-	cwd = os.getcwd()+'/'+dirloc
-	zippy = zipfile.ZipFile(cwd+name , 'w')
-	for fileName in os.listdir(cwd):
-		if fileName != name and fileName[:1] != '.' and fileName[len(fileName)-1:] != '~':
-			zippy.write(dirloc+fileName)
-	zippy.close()
+	cwd = os.getcwd()
+	userdir = cwd+'/'+dirloc
+	##--Make archive of files only (no folders or hidden files)--##
+	if not allFiles:
+		zippy = zipfile.ZipFile(cwd+'/'+name+'.zip' , 'w')
+		for fileName in os.listdir(userdir):
+			if fileName != name+'.zip' and fileName[:1] != '.' and fileName[len(fileName)-1:] != '~':
+				zippy.write(dirloc+fileName)
+		zippy.close()
+	##--Make archive of All folder contents--##
+	else:
+		shutil.make_archive(name , 'zip' , userdir)
