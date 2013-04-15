@@ -1,212 +1,102 @@
-#!/usr/bin/python
-
 ##--Function order:
-##--Main functions: sendData , sendFile , getFile , showFiles , delFile , versioning , archive , startUp , login , signUp , settings , admin
-##--Minor functions: saltHash , getFileSize , getKeyString , hashFile
+##--Main functions: sendData , sendFile , recvFile , login , signUp , settings
+##--Minor functions: saltHash , getFileSize , getKeyString , hashFile , saveStorage , getUnPw
 
 from socket import *
-import hashlib , getpass , os
+import hashlib , getpass , os , pickle
+
+##--Server connection settings--##
+serverName = 'localhost'  	#  Change to IP address server computer
+serverPort = 60145			#  Should match that int set on server
+socketRecvBuffer = 1024		#  2**x
+
+socketSets = [serverName , serverPort]
 
 ##--Send a single string of data and recieve a single string of data--##
-def sendData(DATA , serverName , serverPort):
+def sendData(DATA):
 	try:
 		totalsent = 0
 		clientSocket = socket(AF_INET , SOCK_STREAM)
-		clientSocket.connect((serverName , serverPort))
+		clientSocket.connect((socketSets[0] , socketSets[1]))
 		while totalsent < len(DATA):
 			sent = clientSocket.send(DATA[totalsent:])
 			totalsent = totalsent + sent
-		ret = clientSocket.recv(1024)
+		ret = clientSocket.recv(socketRecvBuffer)
 		clientSocket.close()
 		return ret
 	except Exception , e:
 		print 'Error: ' + str(e)
 
 ##--Sends a file (regardless of contents or size) to the server--##
-def sendFile(credentials , userSets , serverName , serverPort):
+def sendFile(credentials , fileName , userSets):
 	try:
-		fileName = '&&&'
-		while fileName.find('&&&') != -1:
-			fileName = raw_input('What file would you like to send?: ')
-			if fileName.find('&&&') != -1: print "Because of how request data is sent to the server, the file name cannot contain '&&&'"
-		fout = open(userSets['senddir'] + fileName , 'rb')
-		##--Get file name if input points to another dir
-		if fileName.find('/') != -1:
-			fileName = fileName[fileName.rfind('/')+1:]
-		fileLen = str(getFileSize(fout))
-		if fileLen == 0: print 'Server will not accept empty files'
+		if fileName.find('&&&') != -1: print "Because of how request data is sent to the server, the file name cannot contain '&&&'"
 		else:
-			checksum = hashFile(fout , hashlib.sha512())
-			DATA = credentials + '&&&' + fileName + '&&&' + checksum + '&&&' + fileLen
-			clientSocket = socket(AF_INET , SOCK_STREAM)
-			clientSocket.connect((serverName , serverPort))
-			sent = clientSocket.send(DATA)
-			#Server checks if sessionID matches and preps file for contents
-			rec = clientSocket.recv(1024)
-			if rec == 'Connection successful':
-				##--Send file contents--##
-				outputData = fout.readlines()
-				for line in outputData:
-					sent = clientSocket.send(line)
-				rec = clientSocket.recv(1024)
-			print rec
-			clientSocket.close()
-	except Exception , e:
-		print 'Error: ' + str(e)
-
-##--Recieve a file from the server and save to curdir
-def getFile(credentials , userSets , serverName , serverPort):
-	try:
-		clientSocket = socket(AF_INET , SOCK_STREAM)
-		clientSocket.connect((serverName , serverPort))
-		clientSocket.send(credentials)
-		#Server checks if sessionID matches and sends list of files (if any)
-		ret = clientSocket.recv(1024)
-		print ret
-		if ret != 'You have not uploaded any files':
-			ret = ret.split('\n') #Create searchable list from file names
-			fileName = raw_input('\nFile: ')
-			if fileName in ret:
-				clientSocket.send(fileName)
-				fileLen = int(clientSocket.recv(1024))
-				fin = file(userSets['destdir'] + fileName , 'wb')
-				finLen = 0 #current length of recieving file
-				clientSocket.send('send')
-				##--Recieve file of variable length--##
-				while finLen < fileLen:
-					line = clientSocket.recv(1024)
-					fin.write(line)
-					finLen = getFileSize(fin)
-				fin.close()
-				clientSocket.send('success')
-				print 'File recieved'
+			fout = open(userSets['senddir'] + fileName , 'rb')
+			fileLen = str(getFileSize(fout))
+			if fileLen == 0: print 'Server will not accept empty files'
 			else:
-				print 'Error: Not an available file'
-		clientSocket.close()
+				if fileName.find('/') != -1: fileName = fileName[fileName.rfind('/')+1:]
+				checksum = hashFile(fout , hashlib.sha512())
+				DATA = credentials + '&&&' + fileName + '&&&' + checksum + '&&&' + fileLen
+				clientSocket = socket(AF_INET , SOCK_STREAM)
+				clientSocket.connect((socketSets[0] , socketSets[1]))
+				sent = clientSocket.send(DATA)
+				#Server checks if sessionID matches and preps file for contents
+				rec = clientSocket.recv(socketRecvBuffer)
+				if rec == 'Connection successful':
+					##--Send file contents--##
+					outputData = fout.readlines()
+					for line in outputData:
+						sent = clientSocket.send(line)
+					rec = clientSocket.recv(socketRecvBuffer)
+				print rec
+				clientSocket.close()
 	except Exception , e:
 		print 'Error: ' + str(e)
 
-##--Displays a list of files stored on the server--##
-def viewFiles(credentials , serverName , serverPort):
+def recvFile(credentials , fileName , userSets):
 	try:
 		clientSocket = socket(AF_INET , SOCK_STREAM)
-		clientSocket.connect((serverName , serverPort))
-		clientSocket.send(credentials)
-		#Server checks if sessionID matches and sends list of files (if any)
-		ret = clientSocket.recv(1024)
-		print ret
-		clientSocket.close()
-	except Exception , e:
-		print 'Error: ' + str(e)
-
-##--Delete a file saved on the server--##
-def delFile(credentials , serverName , serverPort):
-	try:
-		clientSocket = socket(AF_INET , SOCK_STREAM)
-		clientSocket.connect((serverName , serverPort))
-		clientSocket.send(credentials)
-		#Server checks if sessionID matches and sends list of files (if any)
-		ret = clientSocket.recv(1024)
-		print ret
-		if ret != 'You have not uploaded any files':
-			print ''
-			ret = ret.split('\n') #Create searchable list from file names
-			fileName = raw_input('File: ')
-			if fileName in ret:
-				clientSocket.send(fileName)
-				print clientSocket.recv(1024)
-			else:
-				print 'Error: Not an available file'
-		clientSocket.close()
-	except Exception , e:
-		print 'Error: ' + str(e)
-
-def versioning(credentials , verCommand , userSets , serverName , serverPort):
-	try:
-		clientSocket = socket(AF_INET , SOCK_STREAM)
-		clientSocket.connect((serverName , serverPort))
-		clientSocket.send(credentials+'&&&'+verCommand)
-		#Server checks if sessionID matches and sends list of files (if any)
-		ret = clientSocket.recv(1024)
-		print ret
-		if ret != 'You have not uploaded any files':
-			fileName = raw_input('\nFile: ')
-			if fileName in ret.split('\n'):
-				clientSocket.send(fileName)
-				#Server sends list of file versions
-				ret = clientSocket.recv(1024)
-				print ret
-				if verCommand != 'view':
-					verNum = int(raw_input('\nVersion number: '))-1
-					if verNum in range(len(ret.split('\n'))-1):
-						clientSocket.send(str(verNum))
-						fileLen = int(clientSocket.recv(1024))
-						fin = file(userSets['destdir'] + str(verNum+1) + '#' + fileName , 'wb')
-						finLen = 0 #current length of recieving file
-						clientSocket.send('send')
-						##--Recieve file of variable length--##
-						while finLen < fileLen:
-							line = clientSocket.recv(1024)
-							fin.write(line)
-							finLen = getFileSize(fin)
-						fin.close()
-						clientSocket.send('success')
-						print 'File recieved'
-					else:
-						print 'Not a version number'
-			else:
-				print 'Error: Not an available file'
-		clientSocket.close()
-	except Exception , e:
-		print 'Error: ' + str(e)
-
-##--Recieves a zip archive containing all uploaded files--##
-def archive(DATA , userSets , serverName , serverPort):
-	try:
-		clientSocket = socket(AF_INET , SOCK_STREAM)
-		clientSocket.connect((serverName , serverPort))
-		clientSocket.send(DATA)
-		#Server checks if sessionID matches and prepares zip archive to be sent
-		fileLen = int(clientSocket.recv(1024))
-		fin = file(userSets['destdir'] + 'archive.zip' , 'wb')
+		clientSocket.connect((socketSets[0] , socketSets[1]))
+		clientSocket.send(credentials+'&&&'+fileName)
+		fileLen = int(clientSocket.recv(socketRecvBuffer))
+		if fileName.find('/'): fileName = fileName[fileName.find('/')+1:]
+		fin = file(userSets['destdir'] + fileName , 'wb')
 		finLen = 0 #current length of recieving file
 		clientSocket.send('send')
 		##--Recieve file of variable length--##
 		while finLen < fileLen:
-			line = clientSocket.recv(1024)
+			line = clientSocket.recv(socketRecvBuffer)
 			fin.write(line)
 			finLen = getFileSize(fin)
 		fin.close()
 		clientSocket.send('success')
 		print 'File recieved'
+		clientSocket.close()
 	except Exception , e:
 		print 'Error: ' + str(e)
 
-##--Called if no active user. Invokes login or startup--##
-def startUp(serverName , serverPort):
-	lin = ''
-	while lin != 'L' and lin != 'S':
-		lin = raw_input('\nLogin or Sign up? (L/S) : ').upper()
-	if lin == 'L': ret = login(serverName , serverPort)
-	elif lin == 'S': ret = signUp(serverName , serverPort)
+def filesView(credentials , command , userSets):
+	ret = sendData('viewfiles&&&'+credentials)
+	#Server checks if sessionID matches and sends list of files (if any)
+	if ret != 'You have not uploaded any files':
+		print ret
+		ret = ret.split('\n') #Create searchable list from file names
+		fileName = raw_input('\nFile: ')
+		if fileName == '#quit': return ''
+		else:
+			if fileName in ret: ret = sendData(command+'&&&'+credentials+'&&&'+fileName)
+			else: ret = 'Error: Not an available file'
+		if ret[:4] == '\nVer': return ret , fileName
 	return ret
 
 ##--Existing users login and recieve valid sessionID--##
-def login(serverName , serverPort):
+def login():
 	try:
-		userName = ''
-		password = ''
-		##--Username and password must be 8+ chars and not contain &&& --##
-		while len(userName) < 8 or userName.find('&') != -1:
-			userName = raw_input('Username : ')
-			if len(userName) < 8: print 'Username is not long enough'
-			if userName.find('&') != -1: print 'Do to the way this program talks with the server, your username cannot contain "&"'
-		while len(password) < 8 or password.find('&') != -1:
-			password = getpass.getpass('Password : ')
-			if len(password) < 8: print 'Password is not long enough'
-			if password.find('&') != -1: print 'Do to the way this program talks with the server, your password cannot contain "&"'
+		userName , password = getUnPw()
 		password = saltHash(password , userName) #Encrypt password
-		resp = sendData('login' + '&&&' + userName + '&&&' + password , serverName , serverPort)
+		resp = sendData('login' + '&&&' + userName + '&&&' + password)
 		if type(resp) == type(None): return '' , False , '' #Checks if sendData raised an exception
 		elif resp[:16] == 'Login successful':
 			sucBool = True
@@ -220,22 +110,11 @@ def login(serverName , serverPort):
 		return '' , False , ''
 
 ##--New users create account on server and recieve valid sessionID--##
-def signUp(serverName , serverPort):
+def signUp():
 	try:
-		userName = ''
-		password = ''
-		print 'Both username and password must be at least 8 characters long'
-		##--Username and password must be 8+ chars and not contain &&& --##
-		while len(userName) < 8 or userName.find('&') != -1:
-			userName = raw_input('userName : ')
-			if len(userName) < 8: print 'Username is not long enough'
-			elif userName.find('&') != -1: print 'Do to the way this program talks with the server, your username cannot contain "&"'
-		while len(password) < 8 or password.find('&') != -1:
-			password = getpass.getpass('Password : ')
-			if len(password) < 8: print 'Password is not long enough'
-			elif password.find('&') != -1: print 'Do to the way this program talks with the server, your password cannot contain "&"'
+		userName , password = getUnPw()
 		password = saltHash(password , userName) #Encrypt password
-		resp = sendData('signup' + '&&&' + userName + '&&&' + password , serverName , serverPort)
+		resp = sendData('signup' + '&&&' + userName + '&&&' + password)
 		if type(resp) == type(None): return '' , False , '' #Checks if sendData raised an exception
 		elif resp[:17] == 'Signup successful':
 			sucBool = True
@@ -272,16 +151,6 @@ def settings(command , userSets):
 		print command[1] + ' is not an available setting'
 	return userSets
 
-##--Admin controls require additional password--##
-def admin(credentials , serverName , serverPort):
-	password = getpass.getpass('Server Password: ')	#Ask for password to send to server
-	resp = sendData(credentials + '&&&' + saltHash(password , 'masteradmin') , serverName , serverPort)
-	if type(resp) != type(None): print resp
-	sucBool = True
-	if type(resp) == type(None) or resp[:6] == 'Error:':
-		sucBool = False
-	return sucBool
-
 ##--Salts and hashes password using userName--##
 def saltHash(password , userName):
 	salted_password = "All'improvviso" + userName[:len(userName)-4] + password + userName[len(userName)-4:] + 'Amore'
@@ -312,3 +181,26 @@ def hashFile(afile, hasher, blocksize=65536):
 		buf = afile.read(blocksize)
 	afile.seek(0)
 	return hasher.digest()
+
+##--Save user settings--##
+def saveStorage(userName , sessionID , userSets):
+	storageFile = open('ClientStorage.pkl', 'wb')
+	pickle.dump(userName , storageFile)
+	pickle.dump(sessionID , storageFile)
+	pickle.dump(userSets , storageFile)
+	storageFile.close()
+
+##--Returns valid userName and password--##
+def getUnPw():
+	userName,password = '',''
+	print 'Both username and password must be at least 8 characters long'
+	##--Username and password must be 8+ chars and not contain &&& --##
+	while len(userName) < 8 or userName.find('&') != -1:
+		userName = raw_input('userName : ')
+		if len(userName) < 8: print 'Username is not long enough'
+		elif userName.find('&') != -1: print 'Due to the way this program talks with the server, your username cannot contain "&"'
+	while len(password) < 8 or password.find('&') != -1:
+		password = getpass.getpass('Password : ')
+		if len(password) < 8: print 'Password is not long enough'
+		elif password.find('&') != -1: print 'Due to the way this program talks with the server, your password cannot contain "&"'
+	return userName , password

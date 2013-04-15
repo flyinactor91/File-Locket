@@ -1,6 +1,6 @@
 File Locket
 Created by Michael duPont (flyinactor91@gmail.com)
-v1.1.0a [13 04 2013]
+v1.1.0a [15 04 2013]
 Python 2.7.4 - Unix
 
 Overview:
@@ -46,7 +46,7 @@ Available commands:
 	showfiles		Show stored files
 	delfile			Delete a file on the server
 	versions		File version options
-	archive	(true)		Get all files on server (versions if true)
+	archive			Get all files on server (versions if true)
 	set			Change program settings
 	test			Test server connection
 	logout			Logout and quit
@@ -70,6 +70,6 @@ Source and destination directory control
 File transfer improvements
 Server improvements
 
-1.1.0a [13 04 2013]
+1.1.0a [15 04 2013]
 Recieve file archive
 Client and Server improvements

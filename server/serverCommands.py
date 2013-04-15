@@ -1,5 +1,3 @@
-#!/usr/bin/python
-
 ##--Function order: getKeyString , getFileSize , checkCreds , hashFile , outputMsg , makeZip
 
 import hashlib , os , shutil , zipfile

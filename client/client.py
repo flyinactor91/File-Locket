@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
 ##--Michael duPont
-##--Change "serverName" to IP of server host before running
+##--Change "serverName" in clientCommands to IP of server host before running
 
 from clientCommands import *
 from socket import *
@@ -10,7 +10,7 @@ import pickle
 aboutString = """
 File Locket
 Created by Michael duPont (flyinactor91@gmail.com)
-v1.1.0a [13 04 2013]
+v1.1.0a [15 04 2013]
 Python 2.7.4 - Unix
 
 Simple file storage service
@@ -20,21 +20,23 @@ Files are versioned and can be downloaded
 
 helpString = """
 Available commands:
-	sendfile		Send a file to the server
-	getfile			Get a file from the server
-	viewfiles		View stored files
-	delfile			Delete a file on the server
-	versions	 	File version options
-	archive	(true)	Get all files on server (versions if true)
-	set			Change program settings
-	test			Test server connection
-	logout			Logout and quit
-	quit			Quit without logging out
+	sendfile	Send a file to the server
+	getfile 	Get a file from the server
+	viewfiles	View stored files
+	delfile		Delete a file on the server
+	versions	File version options
+	archive		Get all files on server (versions if true)
+	set		Change program settings
+	test		Test server connection
+	logout		Logout and quit
+	quit		Quit without logging out
 	
 Admin Tools (requires admin pw):
-	adminshowusers		Returns all saved usernames
-	adminclear		Clears all server lib data
-	adminshutdown		Shuts down server and saves data
+	adminshowusers	Returns all saved usernames
+	adminclear	Clears all server lib data
+	adminshutdown	Shuts down server and saves data
+
+Typing #quit into a prompt exits that prompt
 """
 
 noteString = """
@@ -47,17 +49,16 @@ noteString = """
 	File transfer improvements
 	Server improvements
 
-1.1.0a [13 04 2013]
+1.1.0a [15 04 2013]
 	Recieve file archive
 	Client and Server improvements
 """
 
+helpStrings = {'sendfile':'\nsendfile [local file]\nSends a file to the server.','getfile':'\ngetfile (file on server)\nRecieve a file from the server\nCalling getfile without file name calls viewfiles and a prompt','viewfiles':"\nviewfiles\nDisplays all the user's files stored on the server",'delfile':'\ndelfile (file on server)\nPerminantly delete a file and its saved versions from the server\nCalling delfile without file name calls viewfiles and a prompt','versions':'\nversions [command] (file on server) (file version #)\nAvailable commands:\n\tview - View all the versions of a file stored on the server\n\tget - Recieve a file version from the server\nPrompts will be called until a file name and version number are given','archive':'\narchive (true)\nRecieve a .zip archive of files stored on the server\nAlso includes the file versions if call followed by true','set':"\nset (var) (value)\nUser can change program settings\nCalling set with only a var displays that var's value\nCall set by itself for a list of available vars",'test':"\ntest\nContacts the server to check the connection as well as the user's credentials",'logout':'\nlogout\nSigns out user and exits the program\nNote: Server is not contacted','quit':'\nquit\nExits the program without logging out','adminshowusers':'\nadminshowusers\nDisplays a list of all users signed up on this server\nRequires server password','adminclear':"\nadminclear\nResets the server's data storage and saves a backup of the previous files and data\nThis function cannot be called again while the previous backup exists\nRequires server password",'adminshutdown':'\nadminshutdown\nRemotely shutdown the server\nRequires server password'}
+
+
 ##--Main Client Function--##
-def main():
-	##--Server connection settings--##
-	serverName = 'localhost'  	#Change to IP address server computer
-	serverPort = 60145			#Should match that int set on server
-	
+def main():	
 	try:
 		##--Load in (via pickle) IP dictionary--##
 		storageFile = open('ClientStorage.pkl', 'rb')
@@ -76,71 +77,101 @@ def main():
 	##--Ask user for name and init--##
 	if userName == '':
 		while userName == '':
-			userName , sucBool , sessionID = startUp(serverName , serverPort)
+				lin = ''
+				while lin != 'L' and lin != 'S':
+					lin = raw_input('\nLogin or Sign up? (L/S) : ').upper()
+				if lin == 'L': userName , sucBool , sessionID = login()
+				elif lin == 'S': userName , sucBool , sessionID = signUp()
 		##--Save userName and sessionID--##
-		storageFile = open('ClientStorage.pkl', 'wb')
-		pickle.dump(userName , storageFile)
-		pickle.dump(sessionID , storageFile)
-		pickle.dump(userSets , storageFile)
-		storageFile.close()
+		saveStorage(userName , sessionID , userSets)
 	else:
 		print '\nWelcome back' , userName
 		sucBool = True
 	if sucBool:
-		print 'Program Info:  #about , #help , #notes'
+		print 'Program Info:  #about , #help (command) , #notes'
 	else:
 		quitFlag = True
 		userName = ''
 		
 	##--Command Loop--##
 	while not quitFlag:
-		command = raw_input('\ncmd: ')   #Ask user for command input
-		credentials = command.split(' ')[0] + '&&&' + userName + '&&&' + sessionID
+		command = raw_input('\ncmd: ').split(' ')   #Ask user for command input
+		credentials = userName + '&&&' + sessionID
 		
 		##--Send a file to the server--##
-		if command == 'sendfile':
-			sendFile(credentials , userSets , serverName , serverPort)
+		if command[0] == 'sendfile':
+			if len(command) == 1:
+				print 'sendfile [local file]'
+			else:
+				sendFile(command[0]+'&&&'+credentials , command[1] , userSets)
 		
 		##--Recieve a file from the server--##
-		elif command == 'getfile':
-			getFile(credentials , userSets , serverName , serverPort)
-		
-		##--Returns a list  of files stored on the server--##
-		elif command == 'viewfiles':
-			print sendData(credentials , serverName , serverPort)
+		elif command[0] == 'getfile':
+			if len(command) == 1:
+				ret = sendData('viewfiles&&&'+credentials)
+				#Server checks if sessionID matches and sends list of files (if any)
+				print ret
+				if ret != 'You have not uploaded any files':
+					ret = ret.split('\n') #Create searchable list from file names
+					fileName = raw_input('\nFile: ')
+					if fileName != '#quit':
+						if fileName in ret: recvFile('recvfile&&&'+credentials , fileName , userSets)
+						else: print 'Error: Not an available file'
+			elif len(command) == 2:
+				recvFile('recvfile&&&'+credentials , command[1] , userSets)
+			else:
+				print 'getfile (file on server)'
 		
 		##--Delete a file on the server--##
-		elif command == 'delfile':
-			delFile(credentials , serverName , serverPort)
+		elif command[0] == 'delfile':
+			if len(command) == 1:
+				print filesView(credentials , command[0] , userSets)
+			elif len(command) == 2:
+				print sendData('delfile&&&'+credentials+'&&&'+command[1])
+			else:
+				print 'delfile (file on server)'
 			
-		##--Get or delete a versioned file on the server--##
-		elif command.split(' ')[0] == 'versions':
-			if len(command.split(' ')) != 2:
-				print '\nversions [command]\nAvailable commands:\nget\nview'
-			else:
-				verCommand = command.split(' ')[1]
-				if verCommand == 'get' or verCommand == 'view':
-					versioning(credentials , verCommand , userSets , serverName , serverPort)
-				else:
-					print 'Not a recognised command'
+		##--View file versions (and) get a versioned file from the server--##
+		elif command[0] == 'versions':
+			if len(command) == 2:
+				ret = filesView(credentials , command[0] , userSets)
+				print ret[0]
+				if command[1] == 'get':
+					verNum = str(int(raw_input('\nVersion number: '))-1)
+					if verNum != '#quit' and int(verNum) in range(len(ret[0].split('\n'))-1):
+						fileName = ret[1]
+						recvFile('recvver&&&'+credentials , fileName+'/'+verNum+'%%%'+fileName , userSets)
+			elif len(command) == 3:
+				fileName = command[2]
+				ret = sendData(command[0]+'&&&'+credentials+'&&&'+fileName)
+				print ret
+				if command[1] == 'get':
+					verNum = str(int(raw_input('\nVersion number: '))-1)
+					if verNum != '#quit' and int(verNum) in range(len(ret[0].split('\n'))-1):
+						fileName = command[2]
+						recvFile('recvver&&&'+credentials , fileName+'/'+verNum+'%%%'+fileName , userSets)
+			elif len(command) == 4 and command[1] == 'get':
+				fileName = command[2]
+				verNum = str(int(command[3])-1)
+				recvFile('recvver&&&'+credentials , fileName+'/'+verNum+'%%%'+fileName , userSets)
+			else: print '\nversions [command] (file on server) (file version #)\nAvailable commands: get, view'
 		
-		##--Get all files stored on the server--##
-		elif command.split(' ')[0] == 'archive':
-			if len(command.split(' ')) != 2:
-				archive(credentials+'&&&' , userSets , serverName , serverPort)
-			else:
-				archive(credentials+'&&&T' , userSets , serverName , serverPort)
+		##--Get an archive of all files stored on the server--##
+		elif command[0] == 'archive':
+			if len(command) != 2: recvFile('archive&&&'+credentials+'&&&' , 'archive.zip' , userSets)
+			else: recvFile('archive&&&'+credentials+'&&&T' , 'archive.zip' , userSets)
 		
 		##--Change user settings--##
-		elif command.split(' ')[0] == 'set':
-			userSets = settings(command.split(' ') , userSets)
+		elif command[0] == 'set':
+			userSets = settings(command , userSets)
 		
-		##--Checks for healthy connection and valid sessionID--##
-		elif command == 'test':
-			print sendData(credentials , serverName , serverPort)
+		##--viewfiles - Returns a list  of files stored on the server--##
+		##--test - Checks for healthy connection and valid sessionID--##
+		elif command[0] == 'viewfiles' or command[0] == 'test':
+			print sendData(command[0]+'&&&'+credentials)
 		
 		##--Log user out of program and shutdown--##
-		elif command == 'logout':
+		elif command[0] == 'logout':
 			userName = ''
 			quitFlag = True
 		
@@ -148,42 +179,41 @@ def main():
 			##--AdminShutdown shuts down server--##		
 			##--AdminClear clears server storage--##		
 			##--AdminShowUsers shows all user names stored on the server--##		
-		elif command == 'adminshutdown' or command == 'adminclear' or command == 'adminshowusers':
-			sucBool = admin(credentials , serverName , serverPort)
-			if command == 'adminshutdown' and sucBool:
-				quitFlag = True
-			elif command == 'adminclear' and sucBool:
-				userName = ''
-				quitFlag = True
+		elif command[0] == 'adminshutdown' or command[0] == 'adminclear' or command[0] == 'adminshowusers':
+			password = getpass.getpass('Server Password: ')	#Ask for password to send to server
+			resp = sendData(command[0]+'&&&'+credentials+'&&&'+saltHash(password , 'masteradmin'))
+			if type(resp) != type(None):
+				print resp
+				if command[0] == 'adminshutdown' and sucBool:
+					quitFlag = True
+				elif command[0] == 'adminclear' and sucBool:
+					userName = ''
+					quitFlag = True
 		
 		##--Quit--##
-		elif command == 'quit':
-			quitFlag = True
+		elif command[0] == 'quit': quitFlag = True
 		
 		##--About--##
-		elif command == '#about':
-			print aboutString
+		elif command[0] == '#about': print aboutString
 		
 		##--Help--##
-		elif command == '#help':
-			print helpString
+		elif command[0] == '#help':
+			if len(command) == 1: print helpString
+			elif len(command) == 2:
+				if command[1] in helpStrings: print helpStrings[command[1]]
+				else: print 'Not a command'
+			else: print '#help (command)'
 		
 		##--Release Notes--##
-		elif command == '#notes':
-			print noteString
+		elif command[0] == '#notes': print noteString
 		
 		##--Exception--##
-		else:
-			print 'Not a recognised command'
+		else: print 'Not a recognised command'
 		
 		##--End Command Loop--##
 	
 	##--Save userName and sessionID--##
-	storageFile = open('ClientStorage.pkl', 'wb')
-	pickle.dump(userName , storageFile)
-	pickle.dump(sessionID , storageFile)
-	pickle.dump(userSets , storageFile)
-	storageFile.close()
+	saveStorage(userName , sessionID , userSets)
 	
 	print '\nGoodbye\n'
 ##--End main--##

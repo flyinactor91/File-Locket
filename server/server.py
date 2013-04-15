@@ -2,7 +2,7 @@
 
 ##--File Locket (server)
 ##--Created by Michael duPont (flyinactor91@gmail.com)
-##--v1.1.0a [13 04 2013]
+##--v1.1.0a [15 04 2013]
 ##--Python 2.7.4 - Unix
 
 from serverCommands import *
@@ -18,13 +18,13 @@ def main():
 	defaultTimeout = .1			#  Timeout used for normal connection conditions
 	userInputTimeout = 30		#  Timeout when response is needed to be typed by client
 	socketRecvBuffer = 1024 	#  2**x
-	maxConnectedClients = 1	#  Number of simultaneous clients that the server will accept
+	maxConnectedClients = 1		#Number of simultaneous clients that the server will accept
 	outputToFile = True			#  Server log sent to .txt (True) or sent to terminal (False)
 	##--End settings--##
 	
 	##--Accepted commands--##
 	noCredCommands = ['signup' , 'login']
-	credCommands = ['sendfile' , 'getfile' , 'viewfiles' , 'delfile' , 'versions' , 'archive' , 'test' , 'adminshutdown' , 'adminclear' , 'adminshowusers']
+	credCommands = ['sendfile' , 'recvfile' , 'viewfiles' , 'delfile' , 'versions' , 'recvver' , 'archive' , 'test' , 'adminshutdown' , 'adminclear' , 'adminshowusers']
 	
 	##--Check bin and make if unavailable--##
 	if not os.path.isdir('bin'):
@@ -118,7 +118,7 @@ def main():
 							if not os.path.isdir('bin/'+userName+'/.fileversions/'+fileName):
 								os.mkdir((os.getcwd())+'/bin/'+userName+'/.fileversions/'+fileName)
 								FileStorage[userName][fileName] = ['',[]]
-							finVer = file('bin/'+userName+'/.fileversions/'+fileName+'/'+str(len(FileStorage[userName][fileName][1]))+'&&&'+fileName , 'wb')
+							finVer = file('bin/'+userName+'/.fileversions/'+fileName+'/'+str(len(FileStorage[userName][fileName][1]))+'%%%'+fileName , 'wb')
 							while finLen < fileLen:
 									line = connectionSocket.recv(socketRecvBuffer)
 									fin.write(line)
@@ -134,34 +134,27 @@ def main():
 						except Exception , e:
 							connectionSocket.send('File Save Error: ' + str(e))
 							outputMsg(foutput , '\t' + fileName + '  Error: ' + str(e))
-	
+				
 				##--Sends the requested file to the user--##
-				elif command == 'getfile':
-					ret = getKeyString(FileStorage[userName] , '\n')
-					if ret == '':
-						ret = 'You have not uploaded any files'
-						connectionSocket.send(ret)
-					else:
-						connectionSocket.send(ret)
-						connectionSocket.settimeout(userInputTimeout)
-						fileName = connectionSocket.recv(socketRecvBuffer)
-						if fileName in FileStorage[userName]:
-							connectionSocket.settimeout(defaultTimeout)
-							fout = file('bin/'+userName+'/'+fileName , 'rb')
-							fileLen = str(getFileSize(fout))
-							connectionSocket.send(fileLen)
+				elif command == 'recvfile':
+					fileName = stringIn[3]
+					if fileName in FileStorage[userName]:
+						connectionSocket.settimeout(defaultTimeout)
+						fout = file('bin/'+userName+'/'+fileName , 'rb')
+						fileLen = str(getFileSize(fout))
+						connectionSocket.send(fileLen)
+						rec = connectionSocket.recv(socketRecvBuffer)
+						if rec == 'send':
+							outputData = fout.readlines()
+							for line in outputData:
+								sent = connectionSocket.send(line)
 							rec = connectionSocket.recv(socketRecvBuffer)
-							if rec == 'send':
-								outputData = fout.readlines()
-								for line in outputData:
-									sent = connectionSocket.send(line)
-								rec = connectionSocket.recv(socketRecvBuffer)
-								outputMsg(foutput , '\t' + fileName + '  ' + rec)
-							else:
-								outputMsg(foutput , '\t' + fileName + '  Error: recieve')
+							outputMsg(foutput , '\t' + fileName + '  ' + rec)
 						else:
-							outputMsg(foutput , '\t' + fileName + '  Error: not found')
-	
+							outputMsg(foutput , '\t' + fileName + '  Error: recieve')
+					else:
+						outputMsg(foutput , '\t' + fileName + '  Error: not found')
+				
 				##--Sends a list of the user's stored files--##
 				elif command == 'viewfiles':
 					ret = getKeyString(FileStorage[userName] , '\n')
@@ -171,57 +164,40 @@ def main():
 	
 				##--Deletes a user's stored file and versions--##
 				elif command == 'delfile':
-					ret = getKeyString(FileStorage[userName] , '\n')
-					if ret == '':
-						ret = 'You have not uploaded any files'
-						connectionSocket.send(ret)
+					fileName = stringIn[3]
+					if fileName in FileStorage[userName]:
+						os.remove('bin/'+userName+'/'+fileName)
+						shutil.rmtree('bin/'+userName+'/.fileversions/'+fileName)
+						del FileStorage[userName][fileName]
+						connectionSocket.send('File deleted')
 					else:
-						connectionSocket.send(ret)
-						connectionSocket.settimeout(userInputTimeout)
-						fileName = connectionSocket.recv(socketRecvBuffer)
-						connectionSocket.settimeout(defaultTimeout)
-						if fileName in FileStorage[userName]:
-							os.remove('bin/'+userName+'/'+fileName)
-							shutil.rmtree('bin/'+userName+'/.fileversions/'+fileName)
-							del FileStorage[userName][fileName]
-							connectionSocket.send('File deleted')
-						else:
-							outputMsg(foutput , '\t' + fileName + '  Error: not found')
+						outputMsg(foutput , '\t' + fileName + '  Error: not found')
 
-				##--Lets user view and download previous file versions--##
 				elif command == 'versions':
-					verCommand = stringIn[3]
-					ret = getKeyString(FileStorage[userName] , '\n')
-					if ret == '':
-						ret = 'You have not uploaded any files'
-						connectionSocket.send(ret)
-					else:
-						connectionSocket.send(ret)
-						connectionSocket.settimeout(userInputTimeout)
-						fileName = connectionSocket.recv(socketRecvBuffer)
-						if fileName in FileStorage[userName]:
-							connectionSocket.send(getNumListString(FileStorage[userName][fileName][1]))
-							if verCommand != 'view':
-								verNum = connectionSocket.recv(socketRecvBuffer)
-								connectionSocket.settimeout(defaultTimeout)
-								if verNum != '':
-									fout = file('bin/'+userName+'/.fileversions/'+fileName+'/'+verNum+'&&&'+fileName , 'rb')
-									fileLen = str(getFileSize(fout))
-									connectionSocket.send(fileLen)
-									rec = connectionSocket.recv(socketRecvBuffer)
-									if rec == 'send':
-										outputData = fout.readlines()
-										for line in outputData:
-											sent = connectionSocket.send(line)
-										rec = connectionSocket.recv(socketRecvBuffer)
-										outputMsg(foutput , '\t' + fileName + '  ' + verNum + '  ' + rec)
-									else:
-										outputMsg(foutput , '\t' + fileName + '  Error')
-								else:
-									outputMsg(foutput , '\t' + fileName + '  Error: not a version number')
+					fileName = stringIn[3]
+					if fileName in FileStorage[userName]: connectionSocket.send(getNumListString(FileStorage[userName][fileName][1]))
+				
+				##--Lets user download previous file versions--##
+				elif command == 'recvver':
+					fileName = stringIn[3]
+					try:
+						fout = file('bin/'+userName+'/.fileversions/'+fileName , 'rb')
+						fileLen = str(getFileSize(fout))
+						connectionSocket.send(fileLen)
+						rec = connectionSocket.recv(socketRecvBuffer)
+						if rec == 'send':
+							outputData = fout.readlines()
+							for line in outputData:
+								sent = connectionSocket.send(line)
+							rec = connectionSocket.recv(socketRecvBuffer)
+							outputMsg(foutput , '\t' + fileName[fileName.find('/')+1:] + '  ' + rec)
 						else:
-							outputMsg(foutput , '\t' + fileName + '  Error: file not found')
-
+							outputMsg(foutput , '\t' + fileName[fileName.find('/')+1:] + '  Error: recieve')
+					except IOError:
+						connectionSocket.send(line)
+						outputMsg(foutput , '\tNot a file')
+				
+				##--Sends the user an archive of their files--##
 				elif command == 'archive':
 					makeZip(userName , 'bin/'+userName , stringIn[3])
 					fout = file(userName+'.zip' , 'rb')

@@ -1,6 +1,6 @@
 File Locket
 Created by Michael duPont (flyinactor91@gmail.com)
-v1.1.0a [13 04 2013]
+v1.1.0a [15 04 2013]
 Python 2.7.4 - Unix
 
 A brief overview of data structures and improvements/issues
@@ -21,8 +21,6 @@ FileStorage = { username : { filename : [checksum , [list of version datetimes]]
 Storage pickle save/load order: UserStorage, FileStorage
 Folder support is tricky due to viewfile lists and how file versioning is set up
 Scaling will be a problem
---Search algorithms are O(N) --major problem
-----Resolved with native python search
 --No inherent multithreading, serves only one user at a time (untested for multiple-user large file transfers)
 Account authentication would come through email with server-generated random string for user to send to server
 --Option to change password will not be added until user authentication
