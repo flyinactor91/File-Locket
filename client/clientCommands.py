@@ -129,7 +129,7 @@ def signUp():
 
 ##--Change user setting dictionary--##
 def settings(command , userSets):
-	if len(command) == 1: print '\nset [var] (value)\nClear var value with #clear\nVariables that can be set:' + getKeyString(userSets , '\n')
+	if len(command) == 1: print '\nset (var) (value)\nClear var value with #clear\nVariables that can be set:' + getKeyString(userSets , '\n')
 	elif command[1] in userSets:
 		if len(command) == 2:
 			setVal = userSets[command[1]]
@@ -137,8 +137,7 @@ def settings(command , userSets):
 				setVal = 'No value set'
 			print command[1] + ':  ' + setVal
 		else:
-			if command[2] == '#clear':
-				command[2] = ''
+			if command[2] == '#clear': command[2] = ''
 			elif command[1] == 'senddir' or command[1] == 'destdir':
 				if command[2][:1] == '~': command[2] = os.path.expanduser(command[2])
 				elif command[2][:3] == 'cwd': command[2] = command[2].replace('cwd' , os.getcwd() , 1)
@@ -147,8 +146,7 @@ def settings(command , userSets):
 					print command[2] + ' is not a directory'
 					return userSets
 			userSets[command[1]] = command[2]
-	else:
-		print command[1] + ' is not an available setting'
+	else: print command[1] + ' is not an available setting'
 	return userSets
 
 ##--Salts and hashes password using userName--##

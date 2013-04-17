@@ -18,6 +18,7 @@ Server:
 File encryption on the list to implement
 Database stored as two dictionaries and saved between command loops
 Server log is recorded into .txt (default) or to the terminal
+Critical errors (problems with code, not user error) are tracked
 
 Security:
 Passwords are salted and hashed client side so server never sees the plain text
@@ -48,12 +49,14 @@ Available commands:
 	versions		File version options
 	archive			Get all files on server (versions if true)
 	set			Change program settings
+	userstats		Get info about about files
 	test			Test server connection
 	logout			Logout and quit
 	quit			Quit without logging out
 	
 Admin Tools (requires admin/server pw):
 	adminshowusers		Returns all usernames
+	adminserverstats	Returns server statistics
 	adminclear		Clears all server data
 	adminshutdown		Shuts down server
 
@@ -70,6 +73,7 @@ Source and destination directory control
 File transfer improvements
 Server improvements
 
-1.1.0a [15 04 2013]
+1.1.0a [17 04 2013]
+User and server statistics
 Recieve file archive
 Client and Server improvements

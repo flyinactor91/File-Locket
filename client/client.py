@@ -10,7 +10,7 @@ import pickle
 aboutString = """
 File Locket
 Created by Michael duPont (flyinactor91@gmail.com)
-v1.1.0a [15 04 2013]
+v1.1.0a [17 04 2013]
 Python 2.7.4 - Unix
 
 Simple file storage service
@@ -27,12 +27,14 @@ Available commands:
 	versions	File version options
 	archive		Get all files on server (versions if true)
 	set		Change program settings
+	userstats	Get info about about files
 	test		Test server connection
 	logout		Logout and quit
 	quit		Quit without logging out
 	
 Admin Tools (requires admin pw):
 	adminshowusers	Returns all saved usernames
+	adminserverstats	Returns server statistics
 	adminclear	Clears all server lib data
 	adminshutdown	Shuts down server and saves data
 
@@ -49,12 +51,13 @@ noteString = """
 	File transfer improvements
 	Server improvements
 
-1.1.0a [15 04 2013]
+1.1.0a [17 04 2013]
+	User and server statistics
 	Recieve file archive
 	Client and Server improvements
 """
 
-helpStrings = {'sendfile':'\nsendfile [local file]\nSends a file to the server.','getfile':'\ngetfile (file on server)\nRecieve a file from the server\nCalling getfile without file name calls viewfiles and a prompt','viewfiles':"\nviewfiles\nDisplays all the user's files stored on the server",'delfile':'\ndelfile (file on server)\nPerminantly delete a file and its saved versions from the server\nCalling delfile without file name calls viewfiles and a prompt','versions':'\nversions [command] (file on server) (file version #)\nAvailable commands:\n\tview - View all the versions of a file stored on the server\n\tget - Recieve a file version from the server\nPrompts will be called until a file name and version number are given','archive':'\narchive (true)\nRecieve a .zip archive of files stored on the server\nAlso includes the file versions if call followed by true','set':"\nset (var) (value)\nUser can change program settings\nCalling set with only a var displays that var's value\nCall set by itself for a list of available vars",'test':"\ntest\nContacts the server to check the connection as well as the user's credentials",'logout':'\nlogout\nSigns out user and exits the program\nNote: Server is not contacted','quit':'\nquit\nExits the program without logging out','adminshowusers':'\nadminshowusers\nDisplays a list of all users signed up on this server\nRequires server password','adminclear':"\nadminclear\nResets the server's data storage and saves a backup of the previous files and data\nThis function cannot be called again while the previous backup exists\nRequires server password",'adminshutdown':'\nadminshutdown\nRemotely shutdown the server\nRequires server password'}
+helpStrings = {'sendfile':'\nsendfile [local file]\nSends a file to the server.','getfile':'\ngetfile (file on server)\nRecieve a file from the server\nCalling getfile without file name calls viewfiles and a prompt','viewfiles':"\nviewfiles\nDisplays all the user's files stored on the server",'delfile':'\ndelfile (file on server)\nPerminantly delete a file and its saved versions from the server\nCalling delfile without file name calls viewfiles and a prompt','versions':'\nversions [command] (file on server) (file version #)\nAvailable commands:\n\tview - View all the versions of a file stored on the server\n\tget - Recieve a file version from the server\nPrompts will be called until a file name and version number are given','archive':'\narchive (true)\nRecieve a .zip archive of files stored on the server\nAlso includes the file versions if call followed by true','set':"\nset (var) (value)\nUser can change program settings\nCalling set with only a var displays that var's value\nCall set by itself for a list of available vars",'userstats':'\nServer displays information like the number of files a user has uploaded','test':"\ntest\nContacts the server to check the connection as well as the user's credentials",'logout':'\nlogout\nSigns out user and exits the program\nNote: Server is not contacted','quit':'\nquit\nExits the program without logging out','adminshowusers':'\nadminshowusers\nDisplays a list of all users signed up on this server\nRequires server password','adminserverstats':'\nDisplays general information about the server like number of users and approximate server size\nRequires server password','adminclear':"\nadminclear\nResets the server's data storage and saves a backup of the previous files and data\nThis function cannot be called again while the previous backup exists\nRequires server password",'adminshutdown':'\nadminshutdown\nRemotely shutdown the server\nRequires server password'}
 
 
 ##--Main Client Function--##
@@ -167,7 +170,8 @@ def main():
 		
 		##--viewfiles - Returns a list  of files stored on the server--##
 		##--test - Checks for healthy connection and valid sessionID--##
-		elif command[0] == 'viewfiles' or command[0] == 'test':
+		##--userstats - Returns user's storage stats--##
+		elif command[0] == 'viewfiles' or command[0] == 'test' or command[0] == 'userstats':
 			print sendData(command[0]+'&&&'+credentials)
 		
 		##--Log user out of program and shutdown--##
@@ -179,14 +183,14 @@ def main():
 			##--AdminShutdown shuts down server--##		
 			##--AdminClear clears server storage--##		
 			##--AdminShowUsers shows all user names stored on the server--##		
-		elif command[0] == 'adminshutdown' or command[0] == 'adminclear' or command[0] == 'adminshowusers':
+		elif command[0] == 'adminshutdown' or command[0] == 'adminclear' or command[0] == 'adminshowusers' or command[0] == 'adminserverstats':
 			password = getpass.getpass('Server Password: ')	#Ask for password to send to server
 			resp = sendData(command[0]+'&&&'+credentials+'&&&'+saltHash(password , 'masteradmin'))
 			if type(resp) != type(None):
 				print resp
-				if command[0] == 'adminshutdown' and sucBool:
+				if command[0] == 'adminshutdown' and resp[:5] != 'Error':
 					quitFlag = True
-				elif command[0] == 'adminclear' and sucBool:
+				elif command[0] == 'adminclear' and resp[:5] != 'Error':
 					userName = ''
 					quitFlag = True
 		

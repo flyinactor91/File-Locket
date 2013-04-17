@@ -1,12 +1,13 @@
-##--Function order: getKeyString , getFileSize , checkCreds , hashFile , outputMsg , makeZip
+##--Function order: getKeyString , getFileSize , getFolderSize , checkCreds , hashFile , outputMsg , makeZip
 
-import hashlib , os , shutil , zipfile
+import hashlib , os , shutil , zipfile , time
 
 ##--Returns a formatted string of dictionary keys--##
-def getKeyString(dic , strsep):
+def getKeyString(dic , linsep , valsep=''):
 	ret = ''
 	for key in dic:
-		ret += strsep + key
+		ret += linsep + key
+		if valsep: ret += valsep + str(dic[key])
 	return ret
 
 ##--Returns a formatted string of numbered list elements (for versioning)--##
@@ -23,6 +24,14 @@ def getFileSize(fileObj):
 	ret = fileObj.tell()
 	fileObj.seek(curpos)
 	return ret
+
+##--Returns approx number of bytes in a directory including sub-directories--##
+def getFolderSize(dirloc):
+	size = 0
+	for (path, dirs, files) in os.walk(dirloc):
+		for fileName in files:
+			size += os.path.getsize(os.path.join(path, fileName))
+	return size
 
 ##--Checks if userName and sessionID are both valid--##
 def checkCreds(userName , sessionID , dic , foutput):
@@ -68,3 +77,10 @@ def makeZip(name , dirloc='' , allFiles = False):
 	##--Make archive of All folder contents--##
 	else:
 		shutil.make_archive(name , 'zip' , userdir)
+
+def criticalError(*errorInfo):
+	fout = open('bin/criticalErrors.txt' , 'ab')
+	fout.write(time.strftime('%d:%m:%Y-%X'))
+	for i in errorInfo: fout.write('\n'+str(i))
+	fout.write('\n\n')
+	fout.close()
