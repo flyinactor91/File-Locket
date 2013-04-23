@@ -5,12 +5,12 @@
 
 from clientCommands import *
 from socket import *
-import pickle
+import pickle , sys
 
 aboutString = """
 File Locket
 Created by Michael duPont (flyinactor91@gmail.com)
-v1.1.0a [17 04 2013]
+v1.1.1 [23 04 2013]
 Python 2.7.4 - Unix
 
 Simple file storage service
@@ -27,16 +27,16 @@ Available commands:
 	versions	File version options
 	archive		Get all files on server (versions if true)
 	set		Change program settings
-	userstats	Get info about about files
+	stats		Get info about about files
 	test		Test server connection
 	logout		Logout and quit
 	quit		Quit without logging out
 	
-Admin Tools (requires admin pw):
-	adminshowusers	Returns all saved usernames
+Admin Tools (requires server pw):
+	adminshowusers		Returns all saved usernames
 	adminserverstats	Returns server statistics
-	adminclear	Clears all server lib data
-	adminshutdown	Shuts down server and saves data
+	adminclear		Clears all server lib data
+	adminshutdown		Shuts down server and saves data
 
 Typing #quit into a prompt exits that prompt
 """
@@ -51,13 +51,13 @@ noteString = """
 	File transfer improvements
 	Server improvements
 
-1.1.0a [17 04 2013]
+1.1.1 [23 04 2013]
 	User and server statistics
 	Recieve file archive
 	Client and Server improvements
 """
 
-helpStrings = {'sendfile':'\nsendfile [local file]\nSends a file to the server.','getfile':'\ngetfile (file on server)\nRecieve a file from the server\nCalling getfile without file name calls viewfiles and a prompt','viewfiles':"\nviewfiles\nDisplays all the user's files stored on the server",'delfile':'\ndelfile (file on server)\nPerminantly delete a file and its saved versions from the server\nCalling delfile without file name calls viewfiles and a prompt','versions':'\nversions [command] (file on server) (file version #)\nAvailable commands:\n\tview - View all the versions of a file stored on the server\n\tget - Recieve a file version from the server\nPrompts will be called until a file name and version number are given','archive':'\narchive (true)\nRecieve a .zip archive of files stored on the server\nAlso includes the file versions if call followed by true','set':"\nset (var) (value)\nUser can change program settings\nCalling set with only a var displays that var's value\nCall set by itself for a list of available vars",'userstats':'\nServer displays information like the number of files a user has uploaded','test':"\ntest\nContacts the server to check the connection as well as the user's credentials",'logout':'\nlogout\nSigns out user and exits the program\nNote: Server is not contacted','quit':'\nquit\nExits the program without logging out','adminshowusers':'\nadminshowusers\nDisplays a list of all users signed up on this server\nRequires server password','adminserverstats':'\nDisplays general information about the server like number of users and approximate server size\nRequires server password','adminclear':"\nadminclear\nResets the server's data storage and saves a backup of the previous files and data\nThis function cannot be called again while the previous backup exists\nRequires server password",'adminshutdown':'\nadminshutdown\nRemotely shutdown the server\nRequires server password'}
+helpStrings = {'sendfile':'\nsendfile (local file)\nSends a file to the server.','getfile':'\ngetfile (file on server)\nRecieve a file from the server\nCalling getfile without file name calls viewfiles and a prompt','viewfiles':"\nviewfiles\nDisplays all the user's files stored on the server",'delfile':'\ndelfile (file on server)\nPerminantly delete a file and its saved versions from the server\nCalling delfile without file name calls viewfiles and a prompt','versions':'\nversions [command] (file on server) (file version #)\nAvailable commands:\n\tview - View all the versions of a file stored on the server\n\tget - Recieve a file version from the server\nPrompts will be called until a file name and version number are given','archive':"\narchive (true)\nRecieve a .zip archive of files stored on the server\nAlso includes the file versions if call followed by 'true'",'set':"\nset (var) (value)\nUser can change program settings\nCalling set with only a var displays that var's value\nCall set by itself for a list of available vars",'stats':'\nServer displays information like the number of files a user has uploaded','test':"\ntest\nContacts the server to check the connection as well as the user's credentials",'logout':'\nlogout\nSigns out user and exits the program\nNote: Server is not contacted','quit':'\nquit\nExits the program without logging out','adminshowusers':'\nadminshowusers\nDisplays a list of all users signed up on this server\nRequires server password','adminserverstats':'\nDisplays general information about the server like number of users and approximate server size\nRequires server password','adminclear':"\nadminclear\nResets the server's data storage and saves a backup of the previous files and data\nThis function cannot be called again while the previous backup exists\nRequires server password",'adminshutdown':'\nadminshutdown\nRemotely shutdown the server\nRequires server password'}
 
 
 ##--Main Client Function--##
@@ -77,18 +77,21 @@ def main():
 	command = ''
 	quitFlag = False
 	
+	##--Program exits if server connection cannot be established--##
+	if sendData('inittest')[:5] == 'Error': sys.exit('Error: Server is offline')
+	
 	##--Ask user for name and init--##
 	if userName == '':
 		while userName == '':
-				lin = ''
-				while lin != 'L' and lin != 'S':
-					lin = raw_input('\nLogin or Sign up? (L/S) : ').upper()
-				if lin == 'L': userName , sucBool , sessionID = login()
-				elif lin == 'S': userName , sucBool , sessionID = signUp()
+				lin = raw_input('Login or Sign up? (L/S) : ').lower()
+				if lin == 'l': userName , sucBool , sessionID = login()
+				elif lin == 's': userName , sucBool , sessionID = signUp()
+				elif lin == '#quit': sys.exit()
+				else: print 'Not an option. Use #quit to exit\n'
 		##--Save userName and sessionID--##
 		saveStorage(userName , sessionID , userSets)
 	else:
-		print '\nWelcome back' , userName
+		print 'Welcome back' , userName
 		sucBool = True
 	if sucBool:
 		print 'Program Info:  #about , #help (command) , #notes'
@@ -104,9 +107,12 @@ def main():
 		##--Send a file to the server--##
 		if command[0] == 'sendfile':
 			if len(command) == 1:
-				print 'sendfile [local file]'
-			else:
+				fileName = raw_input('File name: ')
+				if fileName != '#quit': sendFile(command[0]+'&&&'+credentials , fileName , userSets)
+			elif len(command) == 2:
 				sendFile(command[0]+'&&&'+credentials , command[1] , userSets)
+			else:
+				print 'sendfile (local file)'
 		
 		##--Recieve a file from the server--##
 		elif command[0] == 'getfile':
@@ -166,12 +172,29 @@ def main():
 		
 		##--Change user settings--##
 		elif command[0] == 'set':
-			userSets = settings(command , userSets)
+			if len(command) == 1: print '\nset (var) (value)\nClear var value with #clear\nVariables that can be set:' + getKeyString(userSets , '\n') + '\ndir settings support ~ for home and #cwd for curdir'
+			elif command[1] in userSets:
+				if len(command) == 2:
+					setVal = userSets[command[1]]
+					if setVal == '':
+						setVal = 'No value set'
+					print command[1] + ':  ' + setVal
+				else:
+					if command[2] == '#clear': command[2] = ''
+					elif command[1] == 'senddir' or command[1] == 'destdir':
+						if command[2][:1] == '~': command[2] = os.path.expanduser(command[2])
+						elif command[2][:4] == '#cwd': command[2] = command[2].replace('#cwd' , os.getcwd() , 1)
+						if command[2][:len(command[2])] != '/' and command[2] != '': command[2] += '/'
+						if not os.path.isdir(command[2]):
+							print command[2] + ' is not a directory'
+							return userSets
+					userSets[command[1]] = command[2]
+			else: print command[1] + ' is not an available setting'
 		
 		##--viewfiles - Returns a list  of files stored on the server--##
 		##--test - Checks for healthy connection and valid sessionID--##
-		##--userstats - Returns user's storage stats--##
-		elif command[0] == 'viewfiles' or command[0] == 'test' or command[0] == 'userstats':
+		##--stats - Returns user's storage stats--##
+		elif command[0] == 'viewfiles' or command[0] == 'test' or command[0] == 'stats':
 			print sendData(command[0]+'&&&'+credentials)
 		
 		##--Log user out of program and shutdown--##

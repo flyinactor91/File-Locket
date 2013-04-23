@@ -1,23 +1,21 @@
 ##--Function order:
-##--Main functions: sendData , sendFile , recvFile , login , signUp , settings
+##--Main functions: sendData , sendFile , recvFile , login , signUp
 ##--Minor functions: saltHash , getFileSize , getKeyString , hashFile , saveStorage , getUnPw
 
 from socket import *
-import hashlib , getpass , os , pickle
+import hashlib , getpass , os , pickle , sys
 
 ##--Server connection settings--##
 serverName = 'localhost'  	#  Change to IP address server computer
 serverPort = 60145			#  Should match that int set on server
 socketRecvBuffer = 1024		#  2**x
 
-socketSets = [serverName , serverPort]
-
 ##--Send a single string of data and recieve a single string of data--##
 def sendData(DATA):
 	try:
 		totalsent = 0
 		clientSocket = socket(AF_INET , SOCK_STREAM)
-		clientSocket.connect((socketSets[0] , socketSets[1]))
+		clientSocket.connect((serverName , serverPort))
 		while totalsent < len(DATA):
 			sent = clientSocket.send(DATA[totalsent:])
 			totalsent = totalsent + sent
@@ -25,7 +23,7 @@ def sendData(DATA):
 		clientSocket.close()
 		return ret
 	except Exception , e:
-		print 'Error: ' + str(e)
+		return 'Error: ' + str(e)
 
 ##--Sends a file (regardless of contents or size) to the server--##
 def sendFile(credentials , fileName , userSets):
@@ -40,7 +38,7 @@ def sendFile(credentials , fileName , userSets):
 				checksum = hashFile(fout , hashlib.sha512())
 				DATA = credentials + '&&&' + fileName + '&&&' + checksum + '&&&' + fileLen
 				clientSocket = socket(AF_INET , SOCK_STREAM)
-				clientSocket.connect((socketSets[0] , socketSets[1]))
+				clientSocket.connect((serverName , serverPort))
 				sent = clientSocket.send(DATA)
 				#Server checks if sessionID matches and preps file for contents
 				rec = clientSocket.recv(socketRecvBuffer)
@@ -58,7 +56,7 @@ def sendFile(credentials , fileName , userSets):
 def recvFile(credentials , fileName , userSets):
 	try:
 		clientSocket = socket(AF_INET , SOCK_STREAM)
-		clientSocket.connect((socketSets[0] , socketSets[1]))
+		clientSocket.connect((serverName , serverPort))
 		clientSocket.send(credentials+'&&&'+fileName)
 		fileLen = int(clientSocket.recv(socketRecvBuffer))
 		if fileName.find('/'): fileName = fileName[fileName.find('/')+1:]
@@ -127,28 +125,6 @@ def signUp():
 		print 'Error: ' + str(e)
 		return '' , False , ''
 
-##--Change user setting dictionary--##
-def settings(command , userSets):
-	if len(command) == 1: print '\nset (var) (value)\nClear var value with #clear\nVariables that can be set:' + getKeyString(userSets , '\n')
-	elif command[1] in userSets:
-		if len(command) == 2:
-			setVal = userSets[command[1]]
-			if setVal == '':
-				setVal = 'No value set'
-			print command[1] + ':  ' + setVal
-		else:
-			if command[2] == '#clear': command[2] = ''
-			elif command[1] == 'senddir' or command[1] == 'destdir':
-				if command[2][:1] == '~': command[2] = os.path.expanduser(command[2])
-				elif command[2][:3] == 'cwd': command[2] = command[2].replace('cwd' , os.getcwd() , 1)
-				if command[2][:len(command[2])] != '/' and command[2] != '': command[2] += '/'
-				if not os.path.isdir(command[2]):
-					print command[2] + ' is not a directory'
-					return userSets
-			userSets[command[1]] = command[2]
-	else: print command[1] + ' is not an available setting'
-	return userSets
-
 ##--Salts and hashes password using userName--##
 def saltHash(password , userName):
 	salted_password = "All'improvviso" + userName[:len(userName)-4] + password + userName[len(userName)-4:] + 'Amore'
@@ -164,10 +140,11 @@ def getFileSize(fileObj):
 	return ret
 
 ##--Returns a formatted string of dictionary keys--##
-def getKeyString(dic , strsep):
+def getKeyString(dic , linsep , valsep=''):
 	ret = ''
 	for key in dic:
-		ret += strsep + key
+		ret += linsep + key
+		if valsep: ret += valsep + str(dic[key])
 	return ret
 
 ##--Returns checksum for given file using given hash--##
@@ -195,10 +172,12 @@ def getUnPw():
 	##--Username and password must be 8+ chars and not contain &&& --##
 	while len(userName) < 8 or userName.find('&') != -1:
 		userName = raw_input('userName : ')
-		if len(userName) < 8: print 'Username is not long enough'
+		if userName == '#quit': sys.exit()
+		elif len(userName) < 8: print 'Username is not long enough'
 		elif userName.find('&') != -1: print 'Due to the way this program talks with the server, your username cannot contain "&"'
 	while len(password) < 8 or password.find('&') != -1:
 		password = getpass.getpass('Password : ')
-		if len(password) < 8: print 'Password is not long enough'
+		if password == '#quit': sys.exit()
+		elif len(password) < 8: print 'Password is not long enough'
 		elif password.find('&') != -1: print 'Due to the way this program talks with the server, your password cannot contain "&"'
 	return userName , password

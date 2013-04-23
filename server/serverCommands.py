@@ -78,6 +78,7 @@ def makeZip(name , dirloc='' , allFiles = False):
 	else:
 		shutil.make_archive(name , 'zip' , userdir)
 
+##--Outputs variable amout of data to error file--##
 def criticalError(*errorInfo):
 	fout = open('bin/criticalErrors.txt' , 'ab')
 	fout.write(time.strftime('%d:%m:%Y-%X'))
