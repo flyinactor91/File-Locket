@@ -147,7 +147,7 @@ def main():
 						if fileName in FileStorage[userName]:
 							os.remove('bin/'+userName+'/'+fileName)
 							shutil.rmtree('bin/'+userName+'/.fileversions/'+fileName)
-							ServerStats['Total Files and Versions'] = ServerStats['Total Files and Versions'] - len(FileStorage[userName][fileName][1])
+							ServerStats['Total Files and Versions'] = ServerStats['Total Files and Versions'] - (len(FileStorage[userName][fileName][1])+1)
 							ServerStats['Total Files'] = ServerStats['Total Files'] - 1
 							del FileStorage[userName][fileName]
 							connectionSocket.send('File deleted')
