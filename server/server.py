@@ -11,15 +11,14 @@ import pickle , os , random , time , shutil
 
 ##--Main Server Function--##
 def main():
-	##--Server custom settings--##
+	##--Server settings--##
 	serverPort = 60145
 	###The current server password is 'letmein'. To change, run the saltHash function found in clientCommands on your new password and paste the output below
 	serverPassword = 'c4c98a50cf4abcd72737aff8679dc17b19a42eecb388c13133cd2de6685282578fe9c53320bae4b8b3ea88bf3e0079a35b4570bdfc81cad7cfb498f024b6fea3'
 	defaultTimeout = .1			#  Timeout used for normal connection conditions
-	userInputTimeout = 30		#  Timeout when response is needed to be typed by client
 	socketRecvBuffer = 1024 	#  2**x
 	maxConnectedClients = 1		#Number of simultaneous clients that the server will accept
-	outputToFile = True			#  Server log sent to .txt (True) or sent to terminal (False)
+	outputToFile = False			#  Server log sent to .txt (True) or sent to terminal (False)
 	##--End settings--##
 	
 	##--Accepted commands--##
@@ -172,10 +171,9 @@ def main():
 									sent = connectionSocket.send(line)
 								rec = connectionSocket.recv(socketRecvBuffer)
 								outputMsg(foutput , '\t' + fileName[fileName.find('/')+1:] + '  ' + rec)
-							else:
-								outputMsg(foutput , '\t' + fileName[fileName.find('/')+1:] + '  Error: recieve')
+							else: outputMsg(foutput , '\t' + fileName[fileName.find('/')+1:] + '  Error: recieve')
 						except IOError:
-							connectionSocket.send(line)
+							connectionSocket.send('Error: Not a file or version')
 							outputMsg(foutput , '\tNot a file')
 					
 					##--Sends the user an archive of their files--##

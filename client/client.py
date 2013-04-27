@@ -93,8 +93,7 @@ def main():
 	else:
 		print 'Welcome back' , userName
 		sucBool = True
-	if sucBool:
-		print 'Program Info:  #about , #help (command) , #notes'
+	if sucBool: print 'Program Info:  #about , #help (command) , #notes'
 	else:
 		quitFlag = True
 		userName = ''
@@ -109,66 +108,64 @@ def main():
 			if len(command) == 1:
 				fileName = raw_input('File name: ')
 				if fileName != '#quit': sendFile(command[0]+'&&&'+credentials , fileName , userSets)
-			elif len(command) == 2:
-				sendFile(command[0]+'&&&'+credentials , command[1] , userSets)
-			else:
-				print 'sendfile (local file)'
+			elif len(command) == 2: sendFile(command[0]+'&&&'+credentials , command[1] , userSets)
+			else: print 'sendfile (local file)'
 		
 		##--Recieve a file from the server--##
 		elif command[0] == 'getfile':
 			if len(command) == 1:
-				ret = sendData('viewfiles&&&'+credentials)
-				#Server checks if sessionID matches and sends list of files (if any)
+				ret = sendData('viewfiles&&&'+credentials) #Server sends list of files (if any)
 				print ret
 				if ret != 'You have not uploaded any files':
 					ret = ret.split('\n') #Create searchable list from file names
 					fileName = raw_input('\nFile: ')
 					if fileName != '#quit':
-						if fileName in ret: recvFile('recvfile&&&'+credentials , fileName , userSets)
+						if fileName in ret: print recvFile('recvfile&&&'+credentials , fileName , userSets)
 						else: print 'Error: Not an available file'
-			elif len(command) == 2:
-				recvFile('recvfile&&&'+credentials , command[1] , userSets)
-			else:
-				print 'getfile (file on server)'
+			elif len(command) == 2: print recvFile('recvfile&&&'+credentials , command[1] , userSets)
+			else: print 'getfile (file on server)'
 		
 		##--Delete a file on the server--##
 		elif command[0] == 'delfile':
-			if len(command) == 1:
-				print filesView(credentials , command[0] , userSets)
-			elif len(command) == 2:
-				print sendData('delfile&&&'+credentials+'&&&'+command[1])
-			else:
-				print 'delfile (file on server)'
+			if len(command) == 1: print viewFileAndSend(credentials , command[0] , userSets)
+			elif len(command) == 2: print sendData('delfile&&&'+credentials+'&&&'+command[1])
+			else: print 'delfile (file on server)'
 			
 		##--View file versions (and) get a versioned file from the server--##
 		elif command[0] == 'versions':
 			if len(command) == 2:
-				ret = filesView(credentials , command[0] , userSets)
-				print ret[0]
-				if command[1] == 'get':
-					verNum = str(int(raw_input('\nVersion number: '))-1)
-					if verNum != '#quit' and int(verNum) in range(len(ret[0].split('\n'))-1):
-						fileName = ret[1]
-						recvFile('recvver&&&'+credentials , fileName+'/'+verNum+'%%%'+fileName , userSets)
+				ret = viewFileAndSend(credentials , command[0] , userSets)
+				if type(ret) != tuple: print ret
+				else:
+					print ret[0]
+					if command[1] == 'get':
+						verNum = raw_input('\nVersion number: ')
+						if verNum != '#quit':
+							if int(verNum) != 0 and int(verNum)-1 in range(len(ret[0].split('\n'))-3):
+								fileName = ret[1]
+								print recvFile('recvver&&&'+credentials , fileName+'/'+str(int(verNum)-1)+'%%%'+fileName , userSets)
+							else: print 'Error: Not an applicable number'
 			elif len(command) == 3:
 				fileName = command[2]
 				ret = sendData(command[0]+'&&&'+credentials+'&&&'+fileName)
 				print ret
 				if command[1] == 'get':
-					verNum = str(int(raw_input('\nVersion number: '))-1)
-					if verNum != '#quit' and int(verNum) in range(len(ret[0].split('\n'))-1):
-						fileName = command[2]
-						recvFile('recvver&&&'+credentials , fileName+'/'+verNum+'%%%'+fileName , userSets)
+					verNum = raw_input('\nVersion number: ')
+					if verNum != '#quit':
+						if int(verNum) != 0 and int(verNum)-1 in range(len(ret.split('\n'))-3):
+							fileName = command[2]
+							print recvFile('recvver&&&'+credentials , fileName+'/'+str(int(verNum)-1)+'%%%'+fileName , userSets)
+						else: print 'Error: Not an applicable number'
 			elif len(command) == 4 and command[1] == 'get':
 				fileName = command[2]
 				verNum = str(int(command[3])-1)
-				recvFile('recvver&&&'+credentials , fileName+'/'+verNum+'%%%'+fileName , userSets)
-			else: print '\nversions [command] (file on server) (file version #)\nAvailable commands: get, view'
+				print recvFile('recvver&&&'+credentials , fileName+'/'+verNum+'%%%'+fileName , userSets)
+			else: print '\nversions [command] (file on server) (version #)\nAvailable commands: get, view'
 		
 		##--Get an archive of all files stored on the server--##
 		elif command[0] == 'archive':
-			if len(command) != 2: recvFile('archive&&&'+credentials+'&&&' , 'archive.zip' , userSets)
-			else: recvFile('archive&&&'+credentials+'&&&T' , 'archive.zip' , userSets)
+			if len(command) != 2: print recvFile('archive&&&'+credentials+'&&&' , 'archive.zip' , userSets)
+			else: print recvFile('archive&&&'+credentials+'&&&T' , 'archive.zip' , userSets)
 		
 		##--Change user settings--##
 		elif command[0] == 'set':
@@ -176,8 +173,7 @@ def main():
 			elif command[1] in userSets:
 				if len(command) == 2:
 					setVal = userSets[command[1]]
-					if setVal == '':
-						setVal = 'No value set'
+					if setVal == '': setVal = 'No value set'
 					print command[1] + ':  ' + setVal
 				else:
 					if command[2] == '#clear': command[2] = ''
@@ -211,8 +207,7 @@ def main():
 			resp = sendData(command[0]+'&&&'+credentials+'&&&'+saltHash(password , 'masteradmin'))
 			if type(resp) != type(None):
 				print resp
-				if command[0] == 'adminshutdown' and resp[:5] != 'Error':
-					quitFlag = True
+				if command[0] == 'adminshutdown' and resp[:5] != 'Error': quitFlag = True
 				elif command[0] == 'adminclear' and resp[:5] != 'Error':
 					userName = ''
 					quitFlag = True

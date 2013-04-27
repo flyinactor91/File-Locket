@@ -23,7 +23,7 @@ def sendData(DATA):
 		clientSocket.close()
 		return ret
 	except Exception , e:
-		return 'Error: ' + str(e)
+		return 'Error: ' + str(e)[str(e).find(']')+1:]
 
 ##--Sends a file (regardless of contents or size) to the server--##
 def sendFile(credentials , fileName , userSets):
@@ -32,33 +32,33 @@ def sendFile(credentials , fileName , userSets):
 		else:
 			fout = open(userSets['senddir'] + fileName , 'rb')
 			fileLen = str(getFileSize(fout))
-			if fileLen == 0: print 'Server will not accept empty files'
-			else:
-				if fileName.find('/') != -1: fileName = fileName[fileName.rfind('/')+1:]
-				checksum = hashFile(fout , hashlib.sha512())
-				DATA = credentials + '&&&' + fileName + '&&&' + checksum + '&&&' + fileLen
-				clientSocket = socket(AF_INET , SOCK_STREAM)
-				clientSocket.connect((serverName , serverPort))
-				sent = clientSocket.send(DATA)
-				#Server checks if sessionID matches and preps file for contents
+			if fileLen == 0: return 'Server will not accept empty files'
+			if fileName.find('/') != -1: fileName = fileName[fileName.rfind('/')+1:]
+			checksum = hashFile(fout , hashlib.sha512())
+			DATA = credentials + '&&&' + fileName + '&&&' + checksum + '&&&' + fileLen
+			clientSocket = socket(AF_INET , SOCK_STREAM)
+			clientSocket.connect((serverName , serverPort))
+			sent = clientSocket.send(DATA)
+			#Server checks if sessionID matches and preps file for contents
+			rec = clientSocket.recv(socketRecvBuffer)
+			if rec == 'Connection successful':
+				##--Send file contents--##
+				outputData = fout.readlines()
+				for line in outputData: sent = clientSocket.send(line)
 				rec = clientSocket.recv(socketRecvBuffer)
-				if rec == 'Connection successful':
-					##--Send file contents--##
-					outputData = fout.readlines()
-					for line in outputData:
-						sent = clientSocket.send(line)
-					rec = clientSocket.recv(socketRecvBuffer)
-				print rec
-				clientSocket.close()
+			print rec
+			clientSocket.close()
 	except Exception , e:
-		print 'Error: ' + str(e)
+		print 'Error: ' + str(e)[str(e).find(']')+1:]
 
 def recvFile(credentials , fileName , userSets):
 	try:
 		clientSocket = socket(AF_INET , SOCK_STREAM)
 		clientSocket.connect((serverName , serverPort))
 		clientSocket.send(credentials+'&&&'+fileName)
-		fileLen = int(clientSocket.recv(socketRecvBuffer))
+		fileLen = clientSocket.recv(socketRecvBuffer)
+		if not fileLen.isdigit(): return fileLen
+		fileLen = int(fileLen)
 		if fileName.find('/'): fileName = fileName[fileName.find('/')+1:]
 		fin = file(userSets['destdir'] + fileName , 'wb')
 		finLen = 0 #current length of recieving file
@@ -70,12 +70,12 @@ def recvFile(credentials , fileName , userSets):
 			finLen = getFileSize(fin)
 		fin.close()
 		clientSocket.send('success')
-		print 'File recieved'
 		clientSocket.close()
+		return 'File recieved'
 	except Exception , e:
-		print 'Error: ' + str(e)
+		print 'Error: ' + str(e)[str(e).find(']')+1:]
 
-def filesView(credentials , command , userSets):
+def viewFileAndSend(credentials , command , userSets):
 	ret = sendData('viewfiles&&&'+credentials)
 	#Server checks if sessionID matches and sends list of files (if any)
 	if ret != 'You have not uploaded any files':
@@ -83,9 +83,8 @@ def filesView(credentials , command , userSets):
 		ret = ret.split('\n') #Create searchable list from file names
 		fileName = raw_input('\nFile: ')
 		if fileName == '#quit': return ''
-		else:
-			if fileName in ret: ret = sendData(command+'&&&'+credentials+'&&&'+fileName)
-			else: ret = 'Error: Not an available file'
+		if fileName in ret: ret = sendData(command+'&&&'+credentials+'&&&'+fileName)
+		else: ret = 'Error: Not an available file'
 		if ret[:4] == '\nVer': return ret , fileName
 	return ret
 
@@ -96,15 +95,14 @@ def login():
 		password = saltHash(password , userName) #Encrypt password
 		resp = sendData('login' + '&&&' + userName + '&&&' + password)
 		if type(resp) == type(None): return '' , False , '' #Checks if sendData raised an exception
-		elif resp[:16] == 'Login successful':
-			sucBool = True
+		elif resp[:16] == 'Login successful': sucBool = True
 		else:
 			print '\n' + resp + '\n'
 			userName = ''
 			sucBool = False
 		return userName , sucBool , resp[resp.find(':')+1:]
 	except Exception , e:
-		print 'Error: ' + str(e)
+		print 'Error: ' + str(e)[str(e).find(']')+1:]
 		return '' , False , ''
 
 ##--New users create account on server and recieve valid sessionID--##
@@ -114,15 +112,14 @@ def signUp():
 		password = saltHash(password , userName) #Encrypt password
 		resp = sendData('signup' + '&&&' + userName + '&&&' + password)
 		if type(resp) == type(None): return '' , False , '' #Checks if sendData raised an exception
-		elif resp[:17] == 'Signup successful':
-			sucBool = True
+		elif resp[:17] == 'Signup successful': sucBool = True
 		else:
 			print '\n' + resp + '\n'
 			userName = ''
 			sucBool = False
 		return userName , sucBool , resp[resp.find(':')+1:]
 	except Exception , e:
-		print 'Error: ' + str(e)
+		print 'Error: ' + str(e)[str(e).find(']')+1:]
 		return '' , False , ''
 
 ##--Salts and hashes password using userName--##
@@ -158,11 +155,9 @@ def hashFile(afile, hasher, blocksize=65536):
 	return hasher.digest()
 
 ##--Save user settings--##
-def saveStorage(userName , sessionID , userSets):
+def saveStorage(*data):
 	storageFile = open('ClientStorage.pkl', 'wb')
-	pickle.dump(userName , storageFile)
-	pickle.dump(sessionID , storageFile)
-	pickle.dump(userSets , storageFile)
+	for i in data: pickle.dump(i , storageFile)
 	storageFile.close()
 
 ##--Returns valid userName and password--##
