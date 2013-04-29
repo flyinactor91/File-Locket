@@ -1,5 +1,5 @@
 ##--Function order:
-##--Main functions: sendData , sendFile , recvFile , login , signUp
+##--Main functions: sendData , sendFile , recvFile , startUp
 ##--Minor functions: saltHash , getFileSize , getKeyString , hashFile , saveStorage , getUnPw
 
 from socket import *
@@ -31,25 +31,23 @@ def sendFile(credentials , fileName , userSets):
 		if fileName.find('&&&') != -1: print "Because of how request data is sent to the server, the file name cannot contain '&&&'"
 		else:
 			fout = open(userSets['senddir'] + fileName , 'rb')
-			fileLen = str(getFileSize(fout))
+			fileLen = getFileSize(fout)
 			if fileLen == 0: return 'Server will not accept empty files'
 			if fileName.find('/') != -1: fileName = fileName[fileName.rfind('/')+1:]
 			checksum = hashFile(fout , hashlib.sha512())
-			DATA = credentials + '&&&' + fileName + '&&&' + checksum + '&&&' + fileLen
+			DATA = credentials + '&&&' + fileName + '&&&' + checksum + '&&&' + str(fileLen)
 			clientSocket = socket(AF_INET , SOCK_STREAM)
 			clientSocket.connect((serverName , serverPort))
-			sent = clientSocket.send(DATA)
-			#Server checks if sessionID matches and preps file for contents
+			sent = clientSocket.send(DATA)  #Server verifies checksum has changed and preps file for contents
 			rec = clientSocket.recv(socketRecvBuffer)
-			if rec == 'Connection successful':
-				##--Send file contents--##
+			if rec == 'success':  #Send file contents
 				outputData = fout.readlines()
 				for line in outputData: sent = clientSocket.send(line)
 				rec = clientSocket.recv(socketRecvBuffer)
-			print rec
 			clientSocket.close()
+			return rec
 	except Exception , e:
-		print 'Error: ' + str(e)[str(e).find(']')+1:]
+		return 'Error: ' + str(e)[str(e).find(']')+1:]
 
 def recvFile(credentials , fileName , userSets):
 	try:
@@ -58,13 +56,12 @@ def recvFile(credentials , fileName , userSets):
 		clientSocket.send(credentials+'&&&'+fileName)
 		fileLen = clientSocket.recv(socketRecvBuffer)
 		if not fileLen.isdigit(): return fileLen
-		fileLen = int(fileLen)
 		if fileName.find('/'): fileName = fileName[fileName.find('/')+1:]
 		fin = file(userSets['destdir'] + fileName , 'wb')
 		finLen = 0 #current length of recieving file
 		clientSocket.send('send')
 		##--Recieve file of variable length--##
-		while finLen < fileLen:
+		while finLen < int(fileLen):
 			line = clientSocket.recv(socketRecvBuffer)
 			fin.write(line)
 			finLen = getFileSize(fin)
@@ -73,7 +70,7 @@ def recvFile(credentials , fileName , userSets):
 		clientSocket.close()
 		return 'File recieved'
 	except Exception , e:
-		print 'Error: ' + str(e)[str(e).find(']')+1:]
+		return 'Error: ' + str(e)[str(e).find(']')+1:]
 
 def viewFileAndSend(credentials , command , userSets):
 	ret = sendData('viewfiles&&&'+credentials)
@@ -88,36 +85,16 @@ def viewFileAndSend(credentials , command , userSets):
 		if ret[:4] == '\nVer': return ret , fileName
 	return ret
 
-##--Existing users login and recieve valid sessionID--##
-def login():
+##--Users signup or login and recieve valid sessionID if successful--##
+def startUp(command):
 	try:
 		userName , password = getUnPw()
 		password = saltHash(password , userName) #Encrypt password
-		resp = sendData('login' + '&&&' + userName + '&&&' + password)
-		if type(resp) == type(None): return '' , False , '' #Checks if sendData raised an exception
-		elif resp[:16] == 'Login successful': sucBool = True
+		resp = sendData(command + '&&&' + userName + '&&&' + password).split('&&&')
+		if resp[0] == 'success': return userName , True , resp[1]
 		else:
-			print '\n' + resp + '\n'
-			userName = ''
-			sucBool = False
-		return userName , sucBool , resp[resp.find(':')+1:]
-	except Exception , e:
-		print 'Error: ' + str(e)[str(e).find(']')+1:]
-		return '' , False , ''
-
-##--New users create account on server and recieve valid sessionID--##
-def signUp():
-	try:
-		userName , password = getUnPw()
-		password = saltHash(password , userName) #Encrypt password
-		resp = sendData('signup' + '&&&' + userName + '&&&' + password)
-		if type(resp) == type(None): return '' , False , '' #Checks if sendData raised an exception
-		elif resp[:17] == 'Signup successful': sucBool = True
-		else:
-			print '\n' + resp + '\n'
-			userName = ''
-			sucBool = False
-		return userName , sucBool , resp[resp.find(':')+1:]
+			print resp[0] + '\n'
+			return '' , False , ''
 	except Exception , e:
 		print 'Error: ' + str(e)[str(e).find(']')+1:]
 		return '' , False , ''
@@ -137,6 +114,7 @@ def getFileSize(fileObj):
 	return ret
 
 ##--Returns a formatted string of dictionary keys--##
+##--If valsep is included, also formats the key's value--##
 def getKeyString(dic , linsep , valsep=''):
 	ret = ''
 	for key in dic:

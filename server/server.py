@@ -80,7 +80,7 @@ def main():
 						if fileName in FileStorage[userName] and FileStorage[userName][fileName][0] == recvChecksum:
 							connectionSocket.send('File has not changed since last upload')
 						else:
-							connectionSocket.send('Connection successful')
+							connectionSocket.send('success')
 							try:
 								fileLen = int(stringIn[5])
 								finLen = 0
@@ -131,7 +131,8 @@ def main():
 							else:
 								outputMsg(foutput , '\t' + fileName + '  Error: recieve')
 						else:
-							outputMsg(foutput , '\t' + fileName + '  Error: not found')
+							connectionSocket.send('Error: not a file')
+							outputMsg(foutput , '\t' + fileName + '  Error: not a file')
 					
 					##--Sends a list of the user's stored files--##
 					elif command == 'viewfiles':
@@ -275,7 +276,7 @@ def main():
 							os.mkdir((os.getcwd())+'/bin/'+userName)
 							os.mkdir((os.getcwd())+'/bin/'+userName+'/.fileversions')
 						ServerStats['Total Users'] += 1
-						connectionSocket.send('Signup successful:' + sessionID)
+						connectionSocket.send('success&&&' + sessionID)
 				
 				##--Server returns valid sessionID--##
 				elif command == 'login':
@@ -283,7 +284,7 @@ def main():
 						if UserStorage[userName][0] == pWord:
 							sessionID = str(random.randint(0 , 10**6))
 							UserStorage[userName][1] = sessionID
-							connectionSocket.send('Login successful:' + sessionID)
+							connectionSocket.send('success&&&' + sessionID)
 						else:
 							connectionSocket.send('Error: Password does not match')
 							outputMsg(foutput , '\tpassword failed')

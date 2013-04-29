@@ -55,10 +55,8 @@ def hashFile(fileObj , hasher , blocksize=65536):
 
 ##--Writes a string to a file if one is open or the console if one is not--##
 def outputMsg(fileObj , msg):
-	try:
-		fileObj.write(msg+'\n')
-	except:
-		print msg
+	try: fileObj.write(msg+'\n')
+	except: print msg
 
 ##--Creates zip archive of folder contents--##
 ##Ex:  makeZip(userName , 'bin/'+userName)

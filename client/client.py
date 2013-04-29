@@ -55,9 +55,13 @@ noteString = """
 	User and server statistics
 	Recieve file archive
 	Client and Server improvements
+
+1.x.xa [29 04 2013]
+	Bug fixes
+	Code reduction
 """
 
-helpStrings = {'sendfile':'\nsendfile (local file)\nSends a file to the server.','getfile':'\ngetfile (file on server)\nRecieve a file from the server\nCalling getfile without file name calls viewfiles and a prompt','viewfiles':"\nviewfiles\nDisplays all the user's files stored on the server",'delfile':'\ndelfile (file on server)\nPerminantly delete a file and its saved versions from the server\nCalling delfile without file name calls viewfiles and a prompt','versions':'\nversions [command] (file on server) (file version #)\nAvailable commands:\n\tview - View all the versions of a file stored on the server\n\tget - Recieve a file version from the server\nPrompts will be called until a file name and version number are given','archive':"\narchive (true)\nRecieve a .zip archive of files stored on the server\nAlso includes the file versions if call followed by 'true'",'set':"\nset (var) (value)\nUser can change program settings\nCalling set with only a var displays that var's value\nCall set by itself for a list of available vars",'stats':'\nServer displays information like the number of files a user has uploaded','test':"\ntest\nContacts the server to check the connection as well as the user's credentials",'logout':'\nlogout\nSigns out user and exits the program\nNote: Server is not contacted','quit':'\nquit\nExits the program without logging out','adminshowusers':'\nadminshowusers\nDisplays a list of all users signed up on this server\nRequires server password','adminserverstats':'\nDisplays general information about the server like number of users and approximate server size\nRequires server password','adminclear':"\nadminclear\nResets the server's data storage and saves a backup of the previous files and data\nThis function cannot be called again while the previous backup exists\nRequires server password",'adminshutdown':'\nadminshutdown\nRemotely shutdown the server\nRequires server password'}
+helpStrings = {'sendfile':'\nsendfile (local file)\nSends a file to the server.','getfile':'\ngetfile (file on server)\nRecieve a file from the server\nCalling getfile without file name calls viewfiles and a prompt','viewfiles':"\nviewfiles\nDisplays all the user's files stored on the server",'delfile':'\ndelfile (file on server)\nPerminantly delete a file and its saved versions from the server\nCalling delfile without file name calls viewfiles and a prompt','versions':'\nversions [command] (file on server) (file version #)\nAvailable commands:\n\tview - View all the versions of a file stored on the server\n\tget - Recieve a file version from the server\nPrompts will be called until all needed info is given','archive':"\narchive (true)\nRecieve a .zip archive of files stored on the server\nAlso includes the file versions if call followed by 'true'",'set':"\nset (var) (value)\nUser can change program settings\nCalling set with only a var displays that var's value\nCall set by itself for a list of available vars",'stats':'\nstats\nServer displays information like the number of files a user has uploaded','test':"\ntest\nContacts the server to check the connection as well as the user's credentials",'logout':'\nlogout\nSigns out user and exits the program\nNote: Server is not contacted','quit':'\nquit\nExits the program without logging out','adminshowusers':'\nadminshowusers\nDisplays a list of all users signed up on this server\nRequires server password','adminserverstats':'\nDisplays general information about the server like number of users and approximate server size\nRequires server password','adminclear':"\nadminclear\nResets the server's data storage and saves a backup of the previous files and data\nThis function cannot be called again while the previous backup exists\nRequires server password",'adminshutdown':'\nadminshutdown\nRemotely shutdown the server\nRequires server password'}
 
 
 ##--Main Client Function--##
@@ -84,8 +88,8 @@ def main():
 	if userName == '':
 		while userName == '':
 				lin = raw_input('Login or Sign up? (L/S) : ').lower()
-				if lin == 'l': userName , sucBool , sessionID = login()
-				elif lin == 's': userName , sucBool , sessionID = signUp()
+				if lin == 'l': userName , sucBool , sessionID = startUp('login')
+				elif lin == 's': userName , sucBool , sessionID = startUp('signup')
 				elif lin == '#quit': sys.exit()
 				else: print 'Not an option. Use #quit to exit\n'
 		##--Save userName and sessionID--##
@@ -107,8 +111,8 @@ def main():
 		if command[0] == 'sendfile':
 			if len(command) == 1:
 				fileName = raw_input('File name: ')
-				if fileName != '#quit': sendFile(command[0]+'&&&'+credentials , fileName , userSets)
-			elif len(command) == 2: sendFile(command[0]+'&&&'+credentials , command[1] , userSets)
+				if fileName != '#quit': print sendFile(command[0]+'&&&'+credentials , fileName , userSets)
+			elif len(command) == 2: print sendFile(command[0]+'&&&'+credentials , command[1] , userSets)
 			else: print 'sendfile (local file)'
 		
 		##--Recieve a file from the server--##
@@ -117,10 +121,9 @@ def main():
 				ret = sendData('viewfiles&&&'+credentials) #Server sends list of files (if any)
 				print ret
 				if ret != 'You have not uploaded any files':
-					ret = ret.split('\n') #Create searchable list from file names
 					fileName = raw_input('\nFile: ')
 					if fileName != '#quit':
-						if fileName in ret: print recvFile('recvfile&&&'+credentials , fileName , userSets)
+						if fileName in ret.split('\n'): print recvFile('recvfile&&&'+credentials , fileName , userSets)
 						else: print 'Error: Not an available file'
 			elif len(command) == 2: print recvFile('recvfile&&&'+credentials , command[1] , userSets)
 			else: print 'getfile (file on server)'
@@ -199,9 +202,6 @@ def main():
 			quitFlag = True
 		
 		##--Admin actions if password is correct:--##
-			##--AdminShutdown shuts down server--##		
-			##--AdminClear clears server storage--##		
-			##--AdminShowUsers shows all user names stored on the server--##		
 		elif command[0] == 'adminshutdown' or command[0] == 'adminclear' or command[0] == 'adminshowusers' or command[0] == 'adminserverstats':
 			password = getpass.getpass('Server Password: ')	#Ask for password to send to server
 			resp = sendData(command[0]+'&&&'+credentials+'&&&'+saltHash(password , 'masteradmin'))
