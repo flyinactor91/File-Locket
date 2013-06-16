@@ -1,6 +1,6 @@
 File Locket
 Created by Michael duPont (flyinactor91@gmail.com)
-v1.1.1 [23 04 2013]
+v1.x.xa [15 06 2013]
 Python 2.7.4 - Unix
 
 A brief overview of data structures and improvements/issues
@@ -13,6 +13,7 @@ File encryption would be implemented with client-side keys before transmission
 --Currently trying to work out how to store key-derivation on server for when client logs into a new session
 Up arrow yields previous text entries
 --Trying to find module to replace raw_input that works with arrow key keyboard event
+Currently, getpass issues echo while in x86 Python IDLE
 
 
 Server:
@@ -22,7 +23,7 @@ ServerStats = {'Total Files' , 'Total Files and Versions' , 'Total Users' , 'Cri
 Storage pickle save/load order: UserStorage, FileStorage, ServerStats
 Folder support is tricky due to viewfile lists and how file versioning is set up
 Scaling will be a problem
---No inherent multithreading, serves only one user at a time (untested for multiple-user large file transfers)
+--No inherent multi-threading, serves only one user at a time (untested for multiple-user large file transfers)
 Account authentication would come through email with server-generated random string for user to send to server
 --Option to change password will not be added until user authentication
---Same for accout deactivation
+--Same for account deactivation

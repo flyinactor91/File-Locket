@@ -1,6 +1,6 @@
 File Locket
 Created by Michael duPont (flyinactor91@gmail.com)
-v1.x.xa [29 04 2013]
+v1.x.xa [15 06 2013]
 Python 2.7.4 - Unix
 
 Overview:
@@ -78,6 +78,7 @@ User and server statistics
 Recieve file archive
 Client and Server improvements
 
-1.x.xa [29 04 2013]
+1.x.xa [15 06 2013]
+Windows/NT support
 Bug fixes
 Code reduction
