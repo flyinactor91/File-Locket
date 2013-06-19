@@ -1,5 +1,5 @@
 ##--Function order:
-##--Main functions: sendData , sendFile , recvFile , startUp
+##--Main functions: sendData , sendFile , recvFile , viewFileAndSend , startUp
 ##--Minor functions: saltHash , getFileSize , getKeyString , hashFile , saveStorage , getUnPw
 
 from socket import *

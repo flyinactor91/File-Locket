@@ -1,4 +1,4 @@
-##--Function order: getKeyString , getFileSize , getFolderSize , checkCreds , hashFile , outputMsg , makeZip
+##--Function order: getKeyString , getNumListString , getFileSize , getFolderSize , checkCreds , hashFile , outputMsg , makeZip , criticalError
 
 import hashlib , os , shutil , zipfile , time
 
