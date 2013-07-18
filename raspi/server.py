@@ -2,7 +2,7 @@
 
 ##--File Locket (server) - for GPIO on Raspberry Pi
 ##--Created by Michael duPont (flyinactor91@gmail.com)
-##--v1.x.xa [15 06 2013]
+##--v1.2.0 [17 07 2013]
 ##--Python 2.7.4 - Unix
 
 ##--Hardware Notes:
@@ -10,7 +10,7 @@
 ##--A circuit diagram is available to connect each LED.
 ##--BLUE_LED : Server is running and online
 ##--GREEN_LED : Server is processing client request
-##--RED_LED : Server has one or more self-reported error
+##--RED_LED : Server has one or more self-reported errors
 
 from serverCommands import *
 from socket import *
@@ -22,11 +22,12 @@ def main():
 	serverPort = 60145
 	###The current server password is 'letmein'. To change, run the saltHash function found in clientCommands on your new password and paste the output below
 	serverPassword = 'c4c98a50cf4abcd72737aff8679dc17b19a42eecb388c13133cd2de6685282578fe9c53320bae4b8b3ea88bf3e0079a35b4570bdfc81cad7cfb498f024b6fea3'
-	defaultTimeout = .1             #  Timeout used for normal connection conditions
-	socketRecvBuffer = 1024         #  2**x
-	maxConnectedClients = 1         #  Number of simultaneous clients that the server will accept
-	outputToFile = True            	#  Server log sent to .txt (True) or sent to terminal (False)
-	raspiHW = True			#  GPIO output to LED activity indicators
+	defaultTimeout = 5				#  Timeout used for normal connection conditions
+	socketRecvBuffer = 1024			#  2**x
+	maxConnectedClients = 1			#  Number of simultaneous clients that the server will accept
+	fileBuffer = 100000				#  Amount of bits for server to recv and process at a time. View dev notes
+	outputToFile = True				#  Server log sent to .txt (True) or sent to terminal (False)
+	raspiHW = True					#  GPIO output to LED activity indicators
 	##--End settings--##
 
 	##--Accepted commands--##
@@ -34,6 +35,7 @@ def main():
 	adminCommands = ['adminshutdown' , 'adminclear' , 'adminshowusers' , 'adminserverstats']
 	noCredCommands = ['signup' , 'login']
 	
+	##--Init GPIO--##
 	if raspiHW:
 		import RPi.GPIO as GPIO
 		GPIO.setmode(GPIO.BCM)
@@ -48,15 +50,15 @@ def main():
 	if not os.path.isdir('bin'): os.mkdir('bin')
 	##--Load in (via pickle) User and File dictionaries--##
 	try:
-			storageFile = open('bin/ServerStorage.pkl', 'rb')
-			UserStorage = pickle.load(storageFile)
-			FileStorage = pickle.load(storageFile)
-			ServerStats = pickle.load(storageFile)
-			storageFile.close()
+		storageFile = open('bin/ServerStorage.pkl', 'rb')
+		UserStorage = pickle.load(storageFile)
+		FileStorage = pickle.load(storageFile)
+		ServerStats = pickle.load(storageFile)
+		storageFile.close()
 	except:
-			UserStorage = {}
-			FileStorage = {}
-			ServerStats = {'Total Files':0,'Total Files and Versions':0,'Total Users':0,'Critical Errors':0}
+		UserStorage = {}
+		FileStorage = {}
+		ServerStats = {'Total Files':0,'Total Files and Versions':0,'Total Users':0,'Critical Errors':0}
 
 	if outputToFile: foutput = open('bin/serverLog.txt' , 'ab')
 	else: foutput = None
@@ -111,21 +113,30 @@ def main():
 						if fileName in FileStorage[userName] and FileStorage[userName][fileName][0] == recvChecksum:
 								connectionSocket.send('File has not changed since last upload')
 						else:
-							connectionSocket.send('success')
+							connectionSocket.send(str(fileBuffer)+'&&&'+str(socketRecvBuffer))
 							try:
 								fileLen = int(stringIn[5])
 								finLen = 0
 								timeString = time.strftime('%d:%m:%Y-%X')
-								fin = file('bin/'+userName+'/'+fileName , 'wb')
-								if not os.path.isdir('bin/'+userName+'/.fileversions/'+fileName):
+								if not os.path.isfile('bin/'+userName+'/'+fileName):
 									os.mkdir((os.getcwd())+'/bin/'+userName+'/.fileversions/'+fileName)
 									FileStorage[userName][fileName] = ['',[]]
+								fin = file('bin/'+userName+'/'+fileName , 'wb')
 								finVer = file('bin/'+userName+'/.fileversions/'+fileName+'/'+str(len(FileStorage[userName][fileName][1]))+'%%%'+fileName , 'wb')
+								curBuffer = 0
+								connections = 0
 								while finLen < fileLen:
 									line = connectionSocket.recv(socketRecvBuffer)
+									curBuffer += len(line)
+									connections += 1
 									fin.write(line)
 									finVer.write(line)
 									finLen = getFileSize(fin)
+									if curBuffer >= fileBuffer:
+										print '\t\tcurBuffer'
+										connectionSocket.send('cont')
+										curBuffer = 0
+									#print fileLen , finLen   #Good point to help figure out var fileBuffer
 								fin.close()
 								finVer.close()
 								checksum = hashFile(open('bin/'+userName+'/'+fileName , 'rb') , hashlib.sha512())
@@ -140,6 +151,11 @@ def main():
 								outputMsg(foutput , '\t' + fileName + '  success')
 							except Exception , e:
 								connectionSocket.send('File Save Error: ' + str(e))
+								os.remove('bin/'+userName+'/'+fileName)
+								os.remove('bin/'+userName+'/.fileversions/'+fileName+'/'+str(len(FileStorage[userName][fileName][1]))+'%%%'+fileName)
+								ServerStats['Total Files and Versions'] = ServerStats['Total Files and Versions'] - (len(FileStorage[userName][fileName][1])+1)
+								ServerStats['Total Files'] = ServerStats['Total Files'] - 1
+								del FileStorage[userName][fileName]
 								ServerStats['Critical Errors'] += 1
 								criticalError(str(e) , stringIn , FileStorage[userName])
 								outputMsg(foutput , '\t' + fileName + '  Error: ' + str(e))
@@ -148,19 +164,8 @@ def main():
 					elif command == 'recvfile':
 						fileName = stringIn[3]
 						if fileName in FileStorage[userName]:
-							connectionSocket.settimeout(defaultTimeout)
-							fout = file('bin/'+userName+'/'+fileName , 'rb')
-							fileLen = str(getFileSize(fout))
-							connectionSocket.send(fileLen)
-							rec = connectionSocket.recv(socketRecvBuffer)
-							if rec == 'send':
-								outputData = fout.readlines()
-								for line in outputData:
-									sent = connectionSocket.send(line)
-								rec = connectionSocket.recv(socketRecvBuffer)
-								outputMsg(foutput , '\t' + fileName + '  ' + rec)
-							else:
-								outputMsg(foutput , '\t' + fileName + '  Error: recieve')
+							msg = sendFile(connectionSocket , file('bin/'+userName+'/'+fileName , 'rb') , socketRecvBuffer)
+							outputMsg(foutput , '\t' + fileName + '  ' + msg)
 						else:
 							connectionSocket.send('Error: not a file')
 							outputMsg(foutput , '\t' + fileName + '  Error: not a file')
@@ -194,18 +199,8 @@ def main():
 					elif command == 'recvver':
 						fileName = stringIn[3]
 						try:
-							fout = file('bin/'+userName+'/.fileversions/'+fileName , 'rb')
-							fileLen = str(getFileSize(fout))
-							connectionSocket.send(fileLen)
-							rec = connectionSocket.recv(socketRecvBuffer)
-							if rec == 'send':
-									outputData = fout.readlines()
-									for line in outputData:
-											sent = connectionSocket.send(line)
-									rec = connectionSocket.recv(socketRecvBuffer)
-									outputMsg(foutput , '\t' + fileName[fileName.find('/')+1:] + '  ' + rec)
-							else: outputMsg(foutput , '\t' + fileName[fileName.find('/')+1:] + '  Error: recieve')
-							fout.close()
+							msg = sendFile(connectionSocket , file('bin/'+userName+'/.fileversions/'+fileName , 'rb') , socketRecvBuffer)
+							outputMsg(foutput , '\t' + fileName + '  ' + msg)
 						except IOError:
 							connectionSocket.send('Error: Not a file or version')
 							outputMsg(foutput , '\tNot a file')
@@ -213,18 +208,9 @@ def main():
 					##--Sends the user an archive of their files--##
 					elif command == 'archive':
 						makeZip(userName , 'bin/'+userName , stringIn[3])
-						fout = file(userName+'.zip' , 'rb')
-						fileLen = str(getFileSize(fout))
-						connectionSocket.send(fileLen)
-						rec = connectionSocket.recv(socketRecvBuffer)
-						if rec == 'send':
-							outputData = fout.readlines()
-							for line in outputData:
-								sent = connectionSocket.send(line)
-							rec = connectionSocket.recv(socketRecvBuffer)
-							os.remove(userName+'.zip')
-						else:
-							outputMsg(foutput , '\tError')
+						msg = sendFile(connectionSocket , file(userName+'.zip' , 'rb') , socketRecvBuffer)
+						outputMsg(foutput , '\t' + msg)
+						os.remove(userName+'.zip')
 
 					##--Tests connection and valid sessionID--##
 					elif command == 'test':

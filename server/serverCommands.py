@@ -1,6 +1,34 @@
-##--Function order: getKeyString , getNumListString , getFileSize , getFolderSize , checkCreds , hashFile , outputMsg , makeZip , criticalError
+##--Function order: sendFile , getKeyString , getNumListString , getFileSize , getFolderSize , checkCreds , hashFile , outputMsg , makeZip , criticalError
 
 import hashlib , os , shutil , zipfile , time
+
+##--Send a given file through a given socket and return appropriate message--##
+def sendFile(connectionSocket , fileObj , socketRecvBuffer):
+	fileLen = str(getFileSize(fileObj))
+	connectionSocket.send(fileLen)
+	rec = connectionSocket.recv(socketRecvBuffer)
+	if rec.find('&&&') != -1:
+		fileBuffer = int(rec.split('&&&')[0])
+		clientRecvBuffer = int(rec.split('&&&')[1])
+		curBuffer = 0
+		outputData = fileObj.readlines()
+		for line in outputData:
+			while len(line) > 0:
+				if len(line) > clientRecvBuffer:
+					curBuffer += connectionSocket.send(line[:clientRecvBuffer])
+					line = line[clientRecvBuffer:]
+				else:
+					curBuffer += connectionSocket.send(line)
+					line = ''
+				if curBuffer >= fileBuffer:
+					rec = connectionSocket.recv(socketRecvBuffer)
+					if rec != 'cont': return 'Error: recieve mid stream'
+					curBuffer = 0
+		rec = connectionSocket.recv(socketRecvBuffer)
+		if rec == 'success': return 'success'
+		else: return 'Error: recieve end stream'
+	else: return 'Error: recieve pre stream'
+	
 
 ##--Returns a formatted string of dictionary keys--##
 def getKeyString(dic , linsep , valsep=''):

@@ -8,7 +8,9 @@ import hashlib , getpass , os , pickle , sys
 ##--Server connection settings--##
 serverName = 'localhost'  	#  Change to IP address server computer
 serverPort = 60145			#  Should match that int set on server
+defaultTimeout = 5			#  Timeout used for normal connection conditions
 socketRecvBuffer = 1024		#  2**x
+fileBuffer = 500000			#  Amount of bits for server to recv and process at a time. View dev notes
 
 ##--Send a single string of data and recieve a single string of data--##
 def sendData(DATA):
@@ -16,6 +18,7 @@ def sendData(DATA):
 		totalsent = 0
 		clientSocket = socket(AF_INET , SOCK_STREAM)
 		clientSocket.connect((serverName , serverPort))
+		clientSocket.settimeout(defaultTimeout)
 		while totalsent < len(DATA):
 			sent = clientSocket.send(DATA[totalsent:])
 			totalsent = totalsent + sent
@@ -38,11 +41,28 @@ def sendFile(credentials , fileName , userSets):
 			DATA = credentials + '&&&' + fileName + '&&&' + checksum + '&&&' + str(fileLen)
 			clientSocket = socket(AF_INET , SOCK_STREAM)
 			clientSocket.connect((serverName , serverPort))
+			clientSocket.settimeout(defaultTimeout)
 			sent = clientSocket.send(DATA)  #Server verifies checksum has changed and preps file for contents
 			rec = clientSocket.recv(socketRecvBuffer)
-			if rec == 'success':  #Send file contents
+			if rec.find('&&&') != -1:  #Send file contents
+				fileBuffer = int(rec.split('&&&')[0])
+				serverRecvBuffer = int(rec.split('&&&')[1])
+				curBuffer = 0
 				outputData = fout.readlines()
-				for line in outputData: sent = clientSocket.send(line)
+				for line in outputData:
+					while len(line) > 0:
+						if len(line) > serverRecvBuffer:
+							curBuffer += clientSocket.send(line[:serverRecvBuffer])
+							line = line[serverRecvBuffer:]
+						else:
+							curBuffer += clientSocket.send(line)
+							line = ''
+						if curBuffer >= fileBuffer:
+							rec = clientSocket.recv(socketRecvBuffer)
+							if rec != 'cont':
+								clientSocket.close()
+								return rec
+							curBuffer = 0
 				rec = clientSocket.recv(socketRecvBuffer)
 			clientSocket.close()
 			return rec
@@ -53,16 +73,22 @@ def recvFile(credentials , fileName , userSets):
 	try:
 		clientSocket = socket(AF_INET , SOCK_STREAM)
 		clientSocket.connect((serverName , serverPort))
+		clientSocket.settimeout(defaultTimeout)
 		clientSocket.send(credentials+'&&&'+fileName)
 		fileLen = clientSocket.recv(socketRecvBuffer)
 		if not fileLen.isdigit(): return fileLen
 		if fileName.find('/'): fileName = fileName[fileName.find('/')+1:]
 		fin = file(userSets['destdir'] + fileName , 'wb')
 		finLen = 0 #current length of recieving file
-		clientSocket.send('send')
+		curBuffer = 0
+		clientSocket.send(str(fileBuffer)+'&&&'+str(socketRecvBuffer))
 		##--Recieve file of variable length--##
 		while finLen < int(fileLen):
 			line = clientSocket.recv(socketRecvBuffer)
+			curBuffer += len(line)
+			if curBuffer >= fileBuffer:
+				clientSocket.send('cont')
+				curBuffer = 0
 			fin.write(line)
 			finLen = getFileSize(fin)
 		fin.close()
@@ -88,7 +114,8 @@ def viewFileAndSend(credentials , command , userSets):
 ##--Users signup or login and recieve valid sessionID if successful--##
 def startUp(command):
 	try:
-		userName , password = getUnPw()
+		if command == 'login': userName , password = getUnPw(True)
+		else: userName , password = getUnPw()
 		password = saltHash(password , userName) #Encrypt password
 		resp = sendData(command + '&&&' + userName + '&&&' + password).split('&&&')
 		if resp[0] == 'success': return userName , True , resp[1]
@@ -139,7 +166,7 @@ def saveStorage(*data):
 	storageFile.close()
 
 ##--Returns valid userName and password--##
-def getUnPw():
+def getUnPw(login = False):
 	userName,password = '',''
 	print 'Both username and password must be at least 8 characters long'
 	##--Username and password must be 8+ chars and not contain &&& --##
@@ -148,9 +175,17 @@ def getUnPw():
 		if userName == '#quit': sys.exit()
 		elif len(userName) < 8: print 'Username is not long enough'
 		elif userName.find('&') != -1: print 'Due to the way this program talks with the server, your username cannot contain "&"'
-	while len(password) < 8 or password.find('&') != -1:
-		password = getpass.getpass('Password : ')
+	passMatch = False
+	while passMatch == False:
+		password = ''
+		while len(password) < 8 or password.find('&') != -1:
+			password = getpass.getpass('Password : ')
+			if password == '#quit': sys.exit()
+			elif len(password) < 8: print 'Password is not long enough'
+			elif password.find('&') != -1: print 'Due to the way this program talks with the server, your password cannot contain "&"'
+		if login: return userName , password
+		verify = getpass.getpass('Verify Password : ')
 		if password == '#quit': sys.exit()
-		elif len(password) < 8: print 'Password is not long enough'
-		elif password.find('&') != -1: print 'Due to the way this program talks with the server, your password cannot contain "&"'
+		elif verify != password: print "Passwords do not match"
+		else: passMatch = True
 	return userName , password

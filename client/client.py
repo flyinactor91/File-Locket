@@ -10,7 +10,7 @@ import pickle , sys , platform
 aboutString = """
 File Locket
 Created by Michael duPont (flyinactor91@gmail.com)
-v1.x.xa [19 06 2013]
+v1.2.0 [17 07 2013]
 Python 2.7.4 - Unix
 
 Simple file storage service
@@ -56,9 +56,11 @@ noteString = """
 	Recieve file archive
 	Client and Server improvements
 
-1.x.xa [19 06 2013]
+1.2.0 [17 07 2013]
 	Windows/NT support
 	#up for directory control
+	Signup verifies password
+	More reliable file transfers
 	Bug fixes
 	Code reduction
 """
@@ -200,7 +202,7 @@ def main():
 		##--stats - Returns user's storage stats--##
 		elif command[0] == 'viewfiles' or command[0] == 'test' or command[0] == 'stats':
 			print sendData(command[0]+'&&&'+credentials)
-
+		
 		##--Log user out of program and shutdown--##
 		elif command[0] == 'logout':
 			userName = ''

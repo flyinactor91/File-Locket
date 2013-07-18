@@ -1,6 +1,6 @@
 File Locket
 Created by Michael duPont (flyinactor91@gmail.com)
-v1.x.xa [15 06 2013]
+v1.2.0 [17 07 2013]
 Python 2.7.4 - Unix
 
 A brief overview of data structures and improvements/issues
@@ -27,3 +27,6 @@ Scaling will be a problem
 Account authentication would come through email with server-generated random string for user to send to server
 --Option to change password will not be added until user authentication
 --Same for account deactivation
+
+Note on fileBuffer variable:
+This is a way to prevent socket timeouts using slower hardware such as the Raspberry Pi. The number defines the approximate length the sender will send before pausing to allow the reciever to finish processing and clear out the socket. While arbitrary compared to socketRecvBuffer, this number needs to reflect the capabilities of the recieving hardware. Therefore, it is up to the admin/developer to determine the apropriate number and may require trial and error, especially on slow hardware. It should be noted that the most the buffer will ever be exceeded by is (socketRecvBuffer-1).

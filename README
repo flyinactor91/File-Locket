@@ -1,6 +1,6 @@
 File Locket
 Created by Michael duPont (flyinactor91@gmail.com)
-v1.x.xa [15 06 2013]
+v1.2.0 [17 07 2013]
 Python 2.7.4 - Unix
 
 Overview:
@@ -29,7 +29,7 @@ User's sessionID changes upon new login -> user can only transmit new commands o
 Admin tools:
 Client asked for admin password which must match encrypted server password
 Admin can shutdown server remotely
-Adminclear saves a backup of database by renaming ~bin and making new blank bin folder
+Adminclear saves a backup of database by renaming ~bin~ and making new blank bin folder
 --Previous backup must be manually removed before next clear
 
 Upgrades for future releases:
@@ -78,8 +78,10 @@ User and server statistics
 Recieve file archive
 Client and Server improvements
 
-1.x.xa [15 06 2013]
+1.2.0 [17 07 2013]
 Windows/NT support
 #up for directory control
+Signup verifies password
+More reliable file transfers
 Bug fixes
 Code reduction
