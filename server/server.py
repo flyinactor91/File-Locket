@@ -2,7 +2,7 @@
 
 ##--File Locket (server)
 ##--Created by Michael duPont (flyinactor91@gmail.com)
-##--v1.2.0 [17 07 2013]
+##--v1.2.xa [20 07 2013]
 ##--Python 2.7.4 - Unix
 
 from serverCommands import *
@@ -19,8 +19,10 @@ def main():
 	socketRecvBuffer = 1024			#  2**x
 	maxConnectedClients = 1			#  Number of simultaneous clients that the server will accept
 	fileBuffer = 500000				#  Amount of bits for server to recv and process at a time. View dev notes
-	outputToFile = True				#  Server log sent to .txt (True) or sent to terminal (False)
+	outputToFile = False				#  Server log sent to .txt (True) or sent to terminal (False)
 	##--End settings--##
+	
+	serverVersion = '1.2.0 alpha [20 07 2013]'
 
 	##--Accepted commands--##
 	credCommands = ['sendfile' , 'recvfile' , 'viewfiles' , 'delfile' , 'versions' , 'recvver' , 'archive' , 'test' , 'stats' , 'adminshutdown' , 'adminclear' , 'adminshowusers' , 'adminserverstats']
@@ -64,7 +66,8 @@ def main():
 			##--Command Rec--##
 
 			##--Confirms server is online, not sent to log/terminal--##
-			if command == 'inittest': connectionSocket.send('T')
+			if command == 'inittest': connectionSocket.send(serverVersion) #Backwards compatable with v1.2.0
+			elif command == 'versionTest': connectionSocket.send(serverVersion) #As of v1.2.xa [20 07 2013]
 
 			##--Requires username and sessionID--##
 			elif command in credCommands:

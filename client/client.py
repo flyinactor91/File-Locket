@@ -10,7 +10,7 @@ import pickle , sys , platform
 aboutString = """
 File Locket
 Created by Michael duPont (flyinactor91@gmail.com)
-v1.2.0 [17 07 2013]
+v1.2.xa [20 07 2013]
 Python 2.7.4 - Unix
 
 Simple file storage service
@@ -63,6 +63,9 @@ noteString = """
 	More reliable file transfers
 	Bug fixes
 	Code reduction
+
+1.2.xa [20 07 2013]
+	Check version on startup
 """
 
 helpStrings = {'sendfile':'\nsendfile (local file)\nSends a file to the server.','getfile':'\ngetfile (file on server)\nRecieve a file from the server\nCalling getfile without file name calls viewfiles and a prompt','viewfiles':"\nviewfiles\nDisplays all the user's files stored on the server",'delfile':'\ndelfile (file on server)\nPerminantly delete a file and its saved versions from the server\nCalling delfile without file name calls viewfiles and a prompt','versions':'\nversions [command] (file on server) (file version #)\nAvailable commands:\n\tview - View all the versions of a file stored on the server\n\tget - Recieve a file version from the server\nPrompts will be called until all needed info is given','archive':"\narchive (true)\nRecieve a .zip archive of files stored on the server\nAlso includes the file versions if call followed by 'true'",'set':"\nset (var) (value)\nUser can change program settings\nCalling set with only a var displays that var's value\nCall set by itself for a list of available vars",'stats':'\nstats\nServer displays information like the number of files a user has uploaded','test':"\ntest\nContacts the server to check the connection as well as the user's credentials",'logout':'\nlogout\nSigns out user and exits the program\nNote: Server is not contacted','quit':'\nquit\nExits the program without logging out','adminshowusers':'\nadminshowusers\nDisplays a list of all users signed up on this server\nRequires server password','adminserverstats':'\nDisplays general information about the server like number of users and approximate server size\nRequires server password','adminclear':"\nadminclear\nResets the server's data storage and saves a backup of the previous files and data\nThis function cannot be called again while the previous backup exists\nRequires server password",'adminshutdown':'\nadminshutdown\nRemotely shutdown the server\nRequires server password'}
@@ -70,8 +73,11 @@ helpStrings = {'sendfile':'\nsendfile (local file)\nSends a file to the server.'
 
 ##--Main Client Function--##
 def main():
+	
+	clientVersion = '1.2.0'
+	
 	try:
-		##--Load in (via pickle) IP dictionary--##
+		##--Load in (via pickle) client storage values--##
 		storageFile = open('ClientStorage.pkl', 'rb')
 		userName = pickle.load(storageFile)
 		sessionID = pickle.load(storageFile)
@@ -82,26 +88,28 @@ def main():
 		sessionID = ''
 		userSets = {'senddir':'','destdir':''}
 
-	##--Program exits if server connection cannot be established--##
-	if sendData('inittest')[:5] == 'Error': sys.exit('Error: Server is offline')
-
+	##--Check if server is online and determines if client-server is compatable--##
+	serverData = sendData('versionTest')
+	serverVersion = serverData[:serverData.find(' ')]
+	if serverVersion[:5] == 'Error': sys.exit('Error: Server is offline') #Program exits if server connection cannot be established
+	compare = compareVersions(clientVersion.split('.') , serverVersion.split('.'))
+	if compare == -1: print '\n\nClient ('+clientVersion+') is out of date and might not work with the server ('+serverData+')\n\n'
+	if compare == 1: print '\n\nClient ('+clientVersion+') is running a newer version and might not work with the server ('+serverData+')\n\n'
+	#Can change to 'if x not in [list of acceptable versions]'
+	
 	##--Ask user for name and init--##
 	if userName == '':
 		while userName == '':
 			lin = raw_input('Login or Sign up? (L/S) : ').lower()
-			if lin == 'l': userName , sucBool , sessionID = startUp('login')
-			elif lin == 's': userName , sucBool , sessionID = startUp('signup')
+			if lin == 'l': userName , sessionID = startUp('login')
+			elif lin == 's': userName , sessionID = startUp('signup')
 			elif lin == '#quit': sys.exit()
 			else: print 'Not an option. Use #quit to exit\n'
 		##--Save userName and sessionID--##
 		saveStorage(userName , sessionID , userSets)
 	else:
 		print 'Welcome back' , userName
-		sucBool = True
-	if sucBool: print 'Program Info:  #about , #help (command) , #notes'
-	else:
-		quitFlag = True
-		userName = ''
+	print 'Program Info:  #about , #help (command) , #notes'
 
 	##--Command Loop--##
 	quitFlag = False

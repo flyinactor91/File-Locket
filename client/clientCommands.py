@@ -1,6 +1,6 @@
 ##--Function order:
 ##--Main functions: sendData , sendFile , recvFile , viewFileAndSend , startUp
-##--Minor functions: saltHash , getFileSize , getKeyString , hashFile , saveStorage , getUnPw
+##--Minor functions: saltHash , getFileSize , getKeyString , hashFile , saveStorage , getUnPw , compareVersions
 
 from socket import *
 import hashlib , getpass , os , pickle , sys
@@ -118,13 +118,13 @@ def startUp(command):
 		else: userName , password = getUnPw()
 		password = saltHash(password , userName) #Encrypt password
 		resp = sendData(command + '&&&' + userName + '&&&' + password).split('&&&')
-		if resp[0] == 'success': return userName , True , resp[1]
+		if resp[0] == 'success': return userName , resp[1]
 		else:
 			print resp[0] + '\n'
-			return '' , False , ''
+			return '' , ''
 	except Exception , e:
 		print 'Error: ' + str(e)[str(e).find(']')+1:]
-		return '' , False , ''
+		return '' , ''
 
 ##--Salts and hashes password using userName--##
 def saltHash(password , userName):
@@ -189,3 +189,16 @@ def getUnPw(login = False):
 		elif verify != password: print "Passwords do not match"
 		else: passMatch = True
 	return userName , password
+
+##--Compares the version values (expressed in a list)--##
+##--ex. v1.2.0 compared to v1.2.1 is compareVersions([1,2,0],[1,2,1]) --> -1 --##
+def compareVersions(list1 , list2):
+	if list1[0] == list2[0]:
+		if list1[1] == list2[1]:
+			if list1[2] == list2[2]: return 0
+			elif list1[2] > list2[2]: return 1
+			elif list1[2] < list2[2]: return -1
+		elif list1[1] > list2[1]: return 1
+		elif list1[1] < list2[1]: return -1
+	elif list1[0] > list2[0]: return 1
+	elif list1[0] < list2[0]: return -1

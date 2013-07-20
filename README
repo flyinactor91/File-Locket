@@ -1,6 +1,6 @@
 File Locket
 Created by Michael duPont (flyinactor91@gmail.com)
-v1.2.0 [17 07 2013]
+v1.2.xa [20 07 2013]
 Python 2.7.4 - Unix
 
 Overview:
@@ -85,3 +85,6 @@ Signup verifies password
 More reliable file transfers
 Bug fixes
 Code reduction
+
+1.2.xa [20 07 2013]
+Check version on startup
