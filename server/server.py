@@ -2,7 +2,7 @@
 
 ##--File Locket (server)
 ##--Created by Michael duPont (flyinactor91@gmail.com)
-##--v1.2.xa [20 07 2013]
+##--v1.2.xa [22 07 2013]
 ##--Python 2.7.4 - Unix
 
 from serverCommands import *
@@ -19,14 +19,14 @@ def main():
 	socketRecvBuffer = 1024			#  2**x
 	maxConnectedClients = 1			#  Number of simultaneous clients that the server will accept
 	fileBuffer = 500000				#  Amount of bits for server to recv and process at a time. View dev notes
-	outputToFile = False				#  Server log sent to .txt (True) or sent to terminal (False)
+	outputToFile = True				#  Server log sent to .txt (True) or sent to terminal (False)
 	##--End settings--##
 	
-	serverVersion = '1.2.0 alpha [20 07 2013]'
+	serverVersion = '1.2.0 alpha [22 07 2013]'
 
 	##--Accepted commands--##
-	credCommands = ['sendfile' , 'recvfile' , 'viewfiles' , 'delfile' , 'versions' , 'recvver' , 'archive' , 'test' , 'stats' , 'adminshutdown' , 'adminclear' , 'adminshowusers' , 'adminserverstats']
-	adminCommands = ['adminshutdown' , 'adminclear' , 'adminshowusers' , 'adminserverstats']
+	credCommands = ['sendfile' , 'recvfile' , 'viewfiles' , 'delfile' , 'versions' , 'recvver' , 'archive' , 'test' , 'stats' , 'viewalerts' , 'clearalerts' , 'adminshutdown' , 'adminclear' , 'adminshowusers' , 'adminserverstats' , 'adminsendalert']
+	adminCommands = ['adminshutdown' , 'adminclear' , 'adminshowusers' , 'adminserverstats' , 'adminsendalert']
 	noCredCommands = ['signup' , 'login']
 
 	##--Check bin and make if unavailable--##
@@ -66,7 +66,7 @@ def main():
 			##--Command Rec--##
 
 			##--Confirms server is online, not sent to log/terminal--##
-			if command == 'inittest': connectionSocket.send(serverVersion) #Backwards compatable with v1.2.0
+			if command == 'inittest': connectionSocket.send('T') #Backwards compatable with v1.2.0
 			elif command == 'versionTest': connectionSocket.send(serverVersion) #As of v1.2.xa [20 07 2013]
 
 			##--Requires username and sessionID--##
@@ -106,8 +106,8 @@ def main():
 									#print fileLen , finLen   #Good point to help figure out var fileBuffer
 								fin.close()
 								finVer.close()
-								checksum = hashFile(open('bin/'+userName+'/'+fileName , 'rb') , hashlib.sha512())
-								FileStorage[userName][fileName][0] = checksum
+								#checksum = hashFile(open('bin/'+userName+'/'+fileName , 'rb') , hashlib.sha512())
+								FileStorage[userName][fileName][0] = recvChecksum
 								FileStorage[userName][fileName][1].append(timeString)
 								connectionSocket.send('File received')
 								if len(FileStorage[userName][fileName][1]) == 1:
@@ -160,7 +160,7 @@ def main():
 					##--Sends a list of versions for a given file--##
 					elif command == 'versions':
 						fileName = stringIn[3]
-						if fileName in FileStorage[userName]: connectionSocket.send(getNumListString(FileStorage[userName][fileName][1]))
+						if fileName in FileStorage[userName]: connectionSocket.send(getNumListString(FileStorage[userName][fileName][1],True))
 
 					##--Lets user download previous file versions--##
 					elif command == 'recvver':
@@ -183,7 +183,7 @@ def main():
 					elif command == 'test':
 						connectionSocket.send('Connection successful')
 
-					##--Tests connection and valid sessionID--##
+					##--Sends formatted string of the user's stats--##
 					elif command == 'stats':
 						ret = '\nNumber of Files:  '+str(len(FileStorage[userName]))
 						verNum = 0
@@ -194,6 +194,19 @@ def main():
 						ret += '\nApprox Storage Size:  %0.3f MB' % (storeSize-verSize)
 						ret += '\n***** with Versions:  %0.3f MB' % (storeSize)
 						connectionSocket.send(ret)
+					
+					##--Sends number of alerts or foratted string of alerts to user--##
+					elif command == 'viewalerts':
+						if stringIn[3]:
+							if len(UserStorage[userName][2]) == 0: ret = 'You have no alerts'
+							else: ret = getNumListString(UserStorage[userName][2])
+							connectionSocket.send(ret)
+						else: connectionSocket.send(str(len(UserStorage[userName][2])))
+					
+					##--Clears user's alerts--##
+					elif command == 'clearalerts':
+						UserStorage[userName][2] = []
+						connectionSocket.send('Alerts have been cleared')
 
 					##--Admin Tools--##
 					elif command in adminCommands:
@@ -237,6 +250,11 @@ def main():
 								ret += '\nTime Online:  '+onlineTime
 								if 'resetTime' in locals(): ret += '\nTime of Last Reset:  '+resetTime
 								connectionSocket.send(ret)
+							
+							##--Admin alert--##
+							elif command == 'adminsendalert':
+								for user in UserStorage: UserStorage[user][2].append(stringIn[4])
+								connectionSocket.send('Alert has been sent')
 						else:
 							outputMsg(foutput , '\tincorrect password')
 							connectionSocket.send('Error: Access Denied')
@@ -255,7 +273,7 @@ def main():
 						outputMsg(foutput , '\tusername failed')
 					else:
 						sessionID = str(random.randint(0 , 10**6))
-						UserStorage[userName] = [pWord , sessionID]
+						UserStorage[userName] = [pWord , sessionID , []]
 						FileStorage[userName] = {}
 						if not os.path.isdir((os.getcwd())+'/bin/'+userName):
 							os.mkdir((os.getcwd())+'/bin/'+userName)

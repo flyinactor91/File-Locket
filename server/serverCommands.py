@@ -38,9 +38,10 @@ def getKeyString(dic , linsep , valsep=''):
 		if valsep: ret += valsep + str(dic[key])
 	return ret
 
-##--Returns a formatted string of numbered list elements (for versioning)--##
-def getNumListString(lst):
-	ret = '\nVer dd:mm:yyyy-hh:mm:ss\n'
+##--Returns a formatted string of numbered list elements--##
+def getNumListString(lst , versions = False):
+	if versions: ret = '\nVer dd:mm:yyyy-hh:mm:ss\n'
+	else: ret = ''
 	for num in range(len(lst)):
 		ret += '\n' + str(num+1) + '.  ' + str(lst[num])
 	return ret

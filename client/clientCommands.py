@@ -171,9 +171,8 @@ def getUnPw(login = False):
 	print 'Both username and password must be at least 8 characters long'
 	##--Username and password must be 8+ chars and not contain &&& --##
 	while len(userName) < 8 or userName.find('&') != -1:
-		userName = raw_input('userName : ')
-		if userName == '#quit': sys.exit()
-		elif len(userName) < 8: print 'Username is not long enough'
+		userName = getInput('userName : ')
+		if len(userName) < 8: print 'Username is not long enough'
 		elif userName.find('&') != -1: print 'Due to the way this program talks with the server, your username cannot contain "&"'
 	passMatch = False
 	while passMatch == False:
@@ -202,3 +201,9 @@ def compareVersions(list1 , list2):
 		elif list1[1] < list2[1]: return -1
 	elif list1[0] > list2[0]: return 1
 	elif list1[0] < list2[0]: return -1
+
+##--Checks for #quit to quit program at any point
+def getInput(prompt = ''):
+	ret = raw_input(prompt)
+	if ret == '#quit': sys.exit()
+	else: return ret
