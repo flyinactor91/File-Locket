@@ -90,6 +90,7 @@ def main():
 		try:
 			##--Begin once the server recieves a connection--##
 			connectionSocket , addr = serverSocket.accept()
+			if raspiHW: GPIO.output(GREEN_LED , True)
 			connectionSocket.settimeout(defaultTimeout)
 			stringIn = connectionSocket.recv(socketRecvBuffer)
 			stringIn = stringIn.split('&&&')
