@@ -5,6 +5,9 @@
 ##--v1.2.xa [22 07 2013]
 ##--Python 2.7.4 - Unix
 
+##--Note:  THIS VERSION WILL NOT BE KEPT UP TO DATE PAST 1.2.xa [22 07 2013]
+##--       This file should be used as an example of how to include hardware into the server
+
 ##--Hardware Notes:
 ##--This version is designed to run with any GPIO connector but only tested on a Raspberry Pi.
 ##--A circuit diagram is available to connect each LED.
@@ -22,12 +25,12 @@ def main():
 	serverPort = 60145
 	###The current server password is 'letmein'. To change, run the saltHash function found in clientCommands on your new password and paste the output below
 	serverPassword = 'c4c98a50cf4abcd72737aff8679dc17b19a42eecb388c13133cd2de6685282578fe9c53320bae4b8b3ea88bf3e0079a35b4570bdfc81cad7cfb498f024b6fea3'
-	defaultTimeout = 5				#  Timeout used for normal connection conditions
+	defaultTimeout = 5			#  Timeout used for normal connection conditions
 	socketRecvBuffer = 1024			#  2**x
 	maxConnectedClients = 1			#  Number of simultaneous clients that the server will accept
-	fileBuffer = 100000				#  Amount of bits for server to recv and process at a time. View dev notes
-	outputToFile = True				#  Server log sent to .txt (True) or sent to terminal (False)
-	raspiHW = True					#  GPIO output to LED activity indicators
+	fileBuffer = 100000			#  Amount of bits for server to recv and process at a time. View dev notes
+	outputToFile = True			#  Server log sent to .txt (True) or sent to terminal (False)
+	raspiHW = True				#  GPIO output to LED activity indicators
 	##--End settings--##
 	
 	serverVersion = '1.2.0 alpha [22 07 2013]'
