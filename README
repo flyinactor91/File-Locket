@@ -1,6 +1,6 @@
 File Locket
 Created by Michael duPont (flyinactor91@gmail.com)
-v1.2.xa [22 07 2013]
+v1.2.xa [2013-08-04]
 Python 2.7.4 - Unix
 
 Overview:
@@ -31,7 +31,7 @@ Client asked for admin password which must match encrypted server password
 Admin can shutdown server remotely
 Adminclear saves a backup of database by renaming ~bin~ and making new blank bin folder
 --Previous backup must be manually removed before next clear
-Admin can send a message to all users using the notification system
+Admin can send a message to one or all users using the notification system
 
 Upgrades for future releases:
 	Folder support
@@ -59,7 +59,7 @@ Available commands:
 Admin Tools (requires server pw):
 	adminshowusers		Returns all saved usernames
 	adminserverstats	Returns server statistics
-	adminsendalert		Send alert to all users
+	adminsendalert		Send alert to users
 	adminclear		Clears all server lib data
 	adminshutdown		Shuts down server and saves data
 
@@ -69,21 +69,21 @@ Typing #quit into a prompt exits that prompt
 
 Release Notes:
 
-1.0.0 [28 03 2013]
+1.0.0 [2013-03-28]
 Initial release
 
-1.1.0 [10 04 2013]
+1.1.0 [2013-04-10]
 File versioning
 Source and destination directory control
 File transfer improvements
 Server improvements
 
-1.1.1 [23 04 2013]
+1.1.1 [2013-07-23]
 User and server statistics
 Recieve file archive
 Client and Server improvements
 
-1.2.0 [17 07 2013]
+1.2.0 [2013-07-17]
 Windows/NT support
 #up for directory control
 Signup verifies password
@@ -91,7 +91,7 @@ More reliable file transfers
 Bug fixes
 Code reduction
 
-1.2.xa [22 07 2013]
+1.2.xa [2013-08-04]
 Check version on startup
 Notification system
 Client and Server improvements

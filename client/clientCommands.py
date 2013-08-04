@@ -6,7 +6,7 @@ from socket import *
 import hashlib , getpass , os , pickle , sys
 
 ##--Server connection settings--##
-serverName = 'localhost'  	#  Change to IP address server computer
+serverName = 'localhost'  	#  Change to IP address of server computer
 serverPort = 60145			#  Should match that int set on server
 defaultTimeout = 5			#  Timeout used for normal connection conditions
 socketRecvBuffer = 1024		#  2**x

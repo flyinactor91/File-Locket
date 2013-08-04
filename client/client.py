@@ -10,12 +10,9 @@ import pickle , sys , platform
 aboutString = """
 File Locket
 Created by Michael duPont (flyinactor91@gmail.com)
-v1.2.xa [22 07 2013]
+v1.2.xa [2013-08-04]
 Python 2.7.4 - Unix
-
-Simple file storage service
-Store, access, and delete files
-Files are versioned and can be downloaded"""
+"""
 
 helpString = """
 Available commands:
@@ -35,28 +32,28 @@ Available commands:
 Admin Tools (requires server pw):
 	adminshowusers		Returns all saved usernames
 	adminserverstats	Returns server statistics
-	adminsendalert		Send alert to all users
+	adminsendalert		Send alert to users
 	adminclear		Clears all server lib data
 	adminshutdown		Shuts down server and saves data
 
 Typing #quit into a prompt exits that prompt"""
 
 noteString = """
-1.0.0 [28 03 2013]
+1.0.0 [2013-03-28]
 	Initial release
 
-1.1.0 [10 04 2013]
+1.1.0 [2013-04-10]
 	File versioning
 	Source and destination directory control
 	File transfer improvements
 	Server improvements
 
-1.1.1 [23 04 2013]
+1.1.1 [2013-07-23]
 	User and server statistics
 	Recieve file archive
 	Client and Server improvements
 
-1.2.0 [17 07 2013]
+1.2.0 [2013-07-17]
 	Windows/NT support
 	#up for directory control
 	Signup verifies password
@@ -64,7 +61,7 @@ noteString = """
 	Bug fixes
 	Code reduction
 
-1.2.xa [22 07 2013]
+1.2.xa [2013-08-04]
 	Check version on startup
 	Notification system
 	Client and Server improvements
@@ -74,7 +71,7 @@ helpStrings = {'sendfile':'\nsendfile (local file)\nSends a file to the server.'
 			   'getfile':'\ngetfile (file on server)\nRecieve a file from the server\nCalling getfile without file name calls viewfiles and a prompt',
 			   'viewfiles':"\nviewfiles\nDisplays all the user's files stored on the server",
 			   'delfile':'\ndelfile (file on server)\nPerminantly delete a file and its saved versions from the server\nCalling delfile without file name calls viewfiles and a prompt',
-			   'versions':'\nversions [command] (file on server) (file version #)\nAvailable commands:\n\tview - View all the versions of a file stored on the server\n\tget - Recieve a file version from the server\nPrompts will be called until all needed info is given',
+			   'versions':'\nversions [command] (file on server) (file version #)\nAvailable commands:\n\tview - View all the versions of a file stored on the server\n\tget - Recieve a file version from the server',
 			   'archive':"\narchive (true)\nRecieve a .zip archive of files stored on the server\nAlso includes the file versions if call followed by 'true'",
 			   'set':"\nset (var) (value)\nUser can change program settings\nCalling set with only a var displays that var's value\nCall set by itself for a list of available vars",
 			   'alerts':"\nalerts [command]\nAvailable commands:\n\tview - View user's current alerts\n\tclear - Clear user's alerts from the server",
@@ -84,7 +81,7 @@ helpStrings = {'sendfile':'\nsendfile (local file)\nSends a file to the server.'
 			   'quit':'\nquit\nExits the program without logging out',
 			   'adminshowusers':'\nadminshowusers\nDisplays a list of all users signed up on this server\nRequires server password',
 			   'adminserverstats':'\nadminserverstats\nDisplays general information about the server like number of users and approximate server size\nRequires server password',
-			   'adminsendalert':'\nadminsendalert\nSend a system-wide alert to all users on the server\nRequires server password',
+			   'adminsendalert':'\nadminsendalert (target user) (alert)\nSend a single-user or system-wide alert\nSetting "all" as the targeted user sends alert to all users\nRequires server password',
 			   'adminclear':"\nadminclear\nResets the server's data storage and saves a backup of the previous files and data\nThis function cannot be called again while the previous backup exists\nRequires server password",
 			   'adminshutdown':'\nadminshutdown\nRemotely shutdown the server\nRequires server password'}
 
@@ -103,7 +100,7 @@ def main():
 		storageFile.close()
 	except:
 		userName , sessionID = '' , ''
-		userSets = {'senddir':'','destdir':'','startalert':'T'}
+		userSets = {'senddir':'','destdir':'','startalert':True}
 
 	##--Check if server is online and determines if client-server is compatable--##
 	serverData = sendData('versionTest')
@@ -112,7 +109,7 @@ def main():
 	compare = compareVersions(clientVersion.split('.') , serverVersion.split('.'))
 	if compare == -1: print '\n\nClient ('+clientVersion+') is out of date and might not work with the server ('+serverData+')\nGo to https://github.com/flyinactor91/File-Locket to get the latest version\n\n'
 	if compare == 1: print '\n\nClient ('+clientVersion+') is running a newer version and might not work with the server ('+serverData+')\n\n'
-	#Can change to 'if x not in [list of acceptable versions]'
+	#Can change to 'if serverVersion not in [list of acceptable versions]'
 	
 	##--Ask user for name and init--##
 	if userName == '':
@@ -126,9 +123,12 @@ def main():
 	else:
 		print 'Welcome back' , userName
 	if userSets['startalert']:
-		alertNum = int(sendData('viewalerts&&&'+userName+'&&&'+sessionID+'&&&'))
-		if alertNum == 1: print 'You have 1 alert'
-		elif alertNum > 1: print 'You have '+str(alertNum)+' alerts'
+		alertNum = sendData('alertNum&&&'+userName)
+		if alertNum.isdigit():
+			if int(alertNum) == 1: print 'You have 1 alert'
+			elif int(alertNum) > 1: print 'You have '+alertNum+' alerts'
+			#Ignore if alertNum == 0
+		else: print 'Alert ' + alertNum
 	print 'Program Info:  #about , #help (command) , #notes'
 
 	##--Command Loop--##
@@ -248,13 +248,19 @@ def main():
 			userSets = {'senddir':'','destdir':'','startalert':True}
 			quitFlag = True
 
+		##------------------------------------------------------------------------------------------##
+		##--Remove the following lines to create a client without access to admin controls
+		##--Also remove admin controls from helpString and helpStrings
+
 		##--Admin actions if password is correct:--##
 		elif command[0] in ['adminshutdown','adminclear','adminshowusers','adminserverstats','adminsendalert']:
 			password = getpass.getpass('Server Password: ') #Ask for password to send to server
 			if password == '#quit': sys.exit()
 			alert = ''
 			if command[0] == 'adminsendalert':
-				alert = '&&&' + raw_input('Alert to send to all users: ')
+				if len(command) == 1: alert = '&&&' + raw_input('Target user: ') + '&&&'+ raw_input('Alert to send: ')
+				elif len(command) == 2: alert = '&&&' + command[1] + '&&&'+ raw_input('Alert to send: ')
+				else: alert = '&&&' + command[1] + '&&&'+ command[2]
 			resp = sendData(command[0]+'&&&'+credentials+'&&&'+saltHash(password , 'masteradmin')+alert)
 			if type(resp) != type(None):
 				print resp
@@ -262,6 +268,8 @@ def main():
 				elif command[0] == 'adminclear' and resp[:5] != 'Error':
 					userName = ''
 					quitFlag = True
+		
+		##------------------------------------------------------------------------------------------##
 
 		##--Quit--##
 		elif command[0] == 'quit': quitFlag = True

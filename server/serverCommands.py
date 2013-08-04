@@ -30,7 +30,7 @@ def sendFile(connectionSocket , fileObj , socketRecvBuffer):
 	else: return 'Error: recieve pre stream'
 	
 
-##--Returns a formatted string of dictionary keys--##
+##--Returns a formatted string of dictionary keys and --##
 def getKeyString(dic , linsep , valsep=''):
 	ret = ''
 	for key in dic:
@@ -40,7 +40,7 @@ def getKeyString(dic , linsep , valsep=''):
 
 ##--Returns a formatted string of numbered list elements--##
 def getNumListString(lst , versions = False):
-	if versions: ret = '\nVer dd:mm:yyyy-hh:mm:ss\n'
+	if versions: ret = '\nVer yyyy-mm-dd hh:mm:ssZ\n'
 	else: ret = ''
 	for num in range(len(lst)):
 		ret += '\n' + str(num+1) + '.  ' + str(lst[num])
@@ -108,7 +108,7 @@ def makeZip(name , dirloc='' , allFiles = False):
 ##--Outputs variable amout of data to error file--##
 def criticalError(*errorInfo):
 	fout = open('bin/criticalErrors.txt' , 'ab')
-	fout.write(time.strftime('%d:%m:%Y-%X'))
+	fout.write(time.strftime('%Y-%m-%d---%X'))
 	for i in errorInfo: fout.write('\n'+str(i))
 	fout.write('\n\n')
 	fout.close()

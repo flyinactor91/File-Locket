@@ -2,7 +2,7 @@
 
 ##--File Locket (server)
 ##--Created by Michael duPont (flyinactor91@gmail.com)
-##--v1.2.xa [22 07 2013]
+##--v1.2.xa [2013-08-04]
 ##--Python 2.7.4 - Unix
 
 from serverCommands import *
@@ -19,10 +19,10 @@ def main():
 	socketRecvBuffer = 1024			#  2**x
 	maxConnectedClients = 1			#  Number of simultaneous clients that the server will accept
 	fileBuffer = 500000				#  Amount of bits for server to recv and process at a time. View dev notes
-	outputToFile = True				#  Server log sent to .txt (True) or sent to terminal (False)
+	outputToFile = False				#  Server log sent to .txt (True) or sent to terminal (False)
 	##--End settings--##
 	
-	serverVersion = '1.2.0 alpha [22 07 2013]'
+	serverVersion = '1.2.0 alpha [2013-08-04]'
 
 	##--Accepted commands--##
 	credCommands = ['sendfile' , 'recvfile' , 'viewfiles' , 'delfile' , 'versions' , 'recvver' , 'archive' , 'test' , 'stats' , 'viewalerts' , 'clearalerts' , 'adminshutdown' , 'adminclear' , 'adminshowusers' , 'adminserverstats' , 'adminsendalert']
@@ -49,7 +49,7 @@ def main():
 	serverSocket = socket(AF_INET , SOCK_STREAM)
 	serverSocket.bind(('' , serverPort))
 	serverSocket.listen(maxConnectedClients)
-	onlineTime = time.strftime('%d:%m:%Y-%X')
+	onlineTime = time.strftime('%Y-%m-%d %H:%M:%SZ' , time.gmtime())
 	outputMsg(foutput , '\n\n'+onlineTime+'\nThe server is ready to recieve')
 
 	##--Main Loop--##
@@ -67,7 +67,13 @@ def main():
 
 			##--Confirms server is online, not sent to log/terminal--##
 			if command == 'inittest': connectionSocket.send('T') #Backwards compatable with v1.2.0
-			elif command == 'versionTest': connectionSocket.send(serverVersion) #As of v1.2.xa [20 07 2013]
+			elif command == 'versionTest': connectionSocket.send(serverVersion) #As of v1.2.xa [2013-07-20]
+			elif command == 'alertNum':
+				userName = stringIn[1]
+				if userName in UserStorage: connectionSocket.send(str(len(UserStorage[userName][2])))
+				else:
+					connectionSocket.send('Error: Username does not exist')
+					outputMsg(foutput , str(addr)+'  '+userName+'  '+command+'\n\tusername failed')
 
 			##--Requires username and sessionID--##
 			elif command in credCommands:
@@ -87,7 +93,7 @@ def main():
 							try:
 								fileLen = int(stringIn[5])
 								finLen = 0
-								timeString = time.strftime('%d:%m:%Y-%X')
+								timeString = time.strftime('%Y-%m-%d %H:%M:%SZ' , time.gmtime())
 								if not os.path.isfile('bin/'+userName+'/'+fileName):
 									os.mkdir((os.getcwd())+'/bin/'+userName+'/.fileversions/'+fileName)
 									FileStorage[userName][fileName] = ['',[]]
@@ -227,7 +233,7 @@ def main():
 									ServerStats = {'Total Files':0,'Total Files and Versions':0,'Total Users':0,'Critical Errors':0}
 									if outputToFile: foutput = open('bin/serverLog.txt' , 'ab')
 									else: foutput = None
-									resetTime = time.strftime('%d:%m:%Y-%X')
+									resetTime = time.strftime('%Y-%m-%d %H:%M:%SZ' , time.gmtime())
 									outputMsg(foutput , '\n\n'+resetTime+'\nThe server is ready to recieve after adminclear')
 									connectionSocket.send('Server has reset all storage')
 								except OSError:
@@ -253,8 +259,15 @@ def main():
 							
 							##--Admin alert--##
 							elif command == 'adminsendalert':
-								for user in UserStorage: UserStorage[user][2].append(stringIn[4])
-								connectionSocket.send('Alert has been sent')
+								targetUser = stringIn[4]
+								if targetUser == 'all':
+									for user in UserStorage: UserStorage[user][2].append(stringIn[5])
+									connectionSocket.send('Alert has been sent to all users')
+								elif targetUser in UserStorage:
+									UserStorage[targetUser][2].append(stringIn[5])
+									connectionSocket.send('Alert has been sent to ' + targetUser)
+								else:
+									connectionSocket.send('Error: Could not send the alert to '+targetUser+'. User does not exist')
 						else:
 							outputMsg(foutput , '\tincorrect password')
 							connectionSocket.send('Error: Access Denied')
