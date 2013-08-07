@@ -2,7 +2,7 @@
 
 ##--File Locket (server)
 ##--Created by Michael duPont (flyinactor91@gmail.com)
-##--v1.2.xa [2013-08-04]
+##--v1.3.0 [2013-08-07]
 ##--Python 2.7.4 - Unix
 
 from serverCommands import *
@@ -19,10 +19,10 @@ def main():
 	socketRecvBuffer = 1024			#  2**x
 	maxConnectedClients = 1			#  Number of simultaneous clients that the server will accept
 	fileBuffer = 500000				#  Amount of bits for server to recv and process at a time. View dev notes
-	outputToFile = False				#  Server log sent to .txt (True) or sent to terminal (False)
+	outputToFile = True				#  Server log sent to .txt (True) or sent to terminal (False)
 	##--End settings--##
 	
-	serverVersion = '1.2.0 alpha [2013-08-04]'
+	serverVersion = '1.3.0 [2013-08-07]'
 
 	##--Accepted commands--##
 	credCommands = ['sendfile' , 'recvfile' , 'viewfiles' , 'delfile' , 'versions' , 'recvver' , 'archive' , 'test' , 'stats' , 'viewalerts' , 'clearalerts' , 'adminshutdown' , 'adminclear' , 'adminshowusers' , 'adminserverstats' , 'adminsendalert']
@@ -65,9 +65,8 @@ def main():
 
 			##--Command Rec--##
 
-			##--Confirms server is online, not sent to log/terminal--##
-			if command == 'inittest': connectionSocket.send('T') #Backwards compatable with v1.2.0
-			elif command == 'versionTest': connectionSocket.send(serverVersion) #As of v1.2.xa [2013-07-20]
+			##--Sent upon client startup, not sent to log/terminal--##
+			if command == 'versionTest': connectionSocket.send(serverVersion)
 			elif command == 'alertNum':
 				userName = stringIn[1]
 				if userName in UserStorage: connectionSocket.send(str(len(UserStorage[userName][2])))
@@ -98,37 +97,34 @@ def main():
 									os.mkdir((os.getcwd())+'/bin/'+userName+'/.fileversions/'+fileName)
 									FileStorage[userName][fileName] = ['',[]]
 								fin = file('bin/'+userName+'/'+fileName , 'wb')
-								finVer = file('bin/'+userName+'/.fileversions/'+fileName+'/'+str(len(FileStorage[userName][fileName][1]))+'%%%'+fileName , 'wb')
 								curBuffer = 0
 								while finLen < fileLen:
 									line = connectionSocket.recv(socketRecvBuffer)
 									curBuffer += len(line)
 									if curBuffer >= fileBuffer:
-										connectionSocket.send('cont')
+										connectionSocket.send(str(finLen))
 										curBuffer = 0
 									fin.write(line)
-									finVer.write(line)
 									finLen = getFileSize(fin)
 									#print fileLen , finLen   #Good point to help figure out var fileBuffer
 								fin.close()
-								finVer.close()
-								#checksum = hashFile(open('bin/'+userName+'/'+fileName , 'rb') , hashlib.sha512())
-								FileStorage[userName][fileName][0] = recvChecksum
-								FileStorage[userName][fileName][1].append(timeString)
-								connectionSocket.send('File received')
-								if len(FileStorage[userName][fileName][1]) == 1:
-									ServerStats['Total Files'] += 1
-									ServerStats['Total Files and Versions'] += 2
+								checksum = hashFile('bin/'+userName+'/'+fileName , hashlib.sha256())
+								if checksum != recvChecksum:
+									connectionSocket.send('File Send Error: Checksum did not match. Try sending again')
+									outputMsg(foutput , '\tchecksum error')
 								else:
-									ServerStats['Total Files and Versions'] += 1
-								outputMsg(foutput , '\t' + fileName + '  success')
+									FileStorage[userName][fileName][0] = recvChecksum
+									FileStorage[userName][fileName][1].append(timeString)
+									shutil.copy2('bin/'+userName+'/'+fileName , 'bin/'+userName+'/.fileversions/'+fileName+'/'+str(len(FileStorage[userName][fileName][1]))+'%%%'+fileName)
+									connectionSocket.send('File received')
+									if len(FileStorage[userName][fileName][1]) == 1:
+										ServerStats['Total Files'] += 1
+										ServerStats['Total Files and Versions'] += 2
+									else:
+										ServerStats['Total Files and Versions'] += 1
+									outputMsg(foutput , '\t' + fileName + '  success')
 							except Exception , e:
 								connectionSocket.send('File Save Error: ' + str(e))
-								os.remove('bin/'+userName+'/'+fileName)
-								os.remove('bin/'+userName+'/.fileversions/'+fileName+'/'+str(len(FileStorage[userName][fileName][1]))+'%%%'+fileName)
-								ServerStats['Total Files and Versions'] = ServerStats['Total Files and Versions'] - (len(FileStorage[userName][fileName][1])+1)
-								ServerStats['Total Files'] = ServerStats['Total Files'] - 1
-								del FileStorage[userName][fileName]
 								ServerStats['Critical Errors'] += 1
 								criticalError(str(e) , stringIn , FileStorage[userName])
 								outputMsg(foutput , '\t' + fileName + '  Error: ' + str(e))
@@ -137,7 +133,7 @@ def main():
 					elif command == 'recvfile':
 						fileName = stringIn[3]
 						if fileName in FileStorage[userName]:
-							msg = sendFile(connectionSocket , file('bin/'+userName+'/'+fileName , 'rb') , socketRecvBuffer)
+							msg = sendFile(connectionSocket , 'bin/'+userName+'/'+fileName , socketRecvBuffer)
 							outputMsg(foutput , '\t' + fileName + '  ' + msg)
 						else:
 							connectionSocket.send('Error: not a file')
@@ -172,7 +168,7 @@ def main():
 					elif command == 'recvver':
 						fileName = stringIn[3]
 						try:
-							msg = sendFile(connectionSocket , file('bin/'+userName+'/.fileversions/'+fileName , 'rb') , socketRecvBuffer)
+							msg = sendFile(connectionSocket , 'bin/'+userName+'/.fileversions/'+fileName , socketRecvBuffer)
 							outputMsg(foutput , '\t' + fileName + '  ' + msg)
 						except IOError:
 							connectionSocket.send('Error: Not a file or version')
@@ -181,7 +177,7 @@ def main():
 					##--Sends the user an archive of their files--##
 					elif command == 'archive':
 						makeZip(userName , 'bin/'+userName , stringIn[3])
-						msg = sendFile(connectionSocket , file(userName+'.zip' , 'rb') , socketRecvBuffer)
+						msg = sendFile(connectionSocket , userName+'.zip' , socketRecvBuffer)
 						outputMsg(foutput , '\t' + msg)
 						os.remove(userName+'.zip')
 
@@ -197,8 +193,8 @@ def main():
 						ret += '\nTotal Stored Versions:  '+str(verNum)
 						storeSize = getFolderSize('bin/'+userName)/(1024*1024.0)
 						verSize = getFolderSize('bin/'+userName+'/.fileversions')/(1024*1024.0)
-						ret += '\nApprox Storage Size:  %0.3f MB' % (storeSize-verSize)
-						ret += '\n***** with Versions:  %0.3f MB' % (storeSize)
+						ret += '\nApprox Storage Size:  {0:.3f} MB'.format(storeSize-verSize)
+						ret += '\n***** with Versions:  {0:.3f} MB'.format(storeSize)
 						connectionSocket.send(ret)
 					
 					##--Sends number of alerts or foratted string of alerts to user--##
@@ -252,7 +248,7 @@ def main():
 							##--Returns all usernames in UserStorage--##
 							elif command == 'adminserverstats':
 								ret = getKeyString(ServerStats , '\n' , ':  ')
-								ret += '\nApprox Server Size:  %0.3f MB' % (getFolderSize('bin')/(1024*1024.0))
+								ret += '\nApprox Server Size:  {0:.3f} MB'.format(getFolderSize('bin')/(1024*1024.0))
 								ret += '\nTime Online:  '+onlineTime
 								if 'resetTime' in locals(): ret += '\nTime of Last Reset:  '+resetTime
 								connectionSocket.send(ret)

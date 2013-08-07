@@ -1,6 +1,6 @@
 ##--Function order:
 ##--Main functions: sendData , sendFile , recvFile , viewFileAndSend , startUp
-##--Minor functions: saltHash , getFileSize , getKeyString , hashFile , saveStorage , getUnPw , compareVersions
+##--Minor functions: saltHash , getFileSize , getKeyString , hashFile , saveStorage , getUnPw , compareVersions , getInput , ProgressBar
 
 from socket import *
 import hashlib , getpass , os , pickle , sys
@@ -31,13 +31,16 @@ def sendData(DATA):
 ##--Sends a file (regardless of contents or size) to the server--##
 def sendFile(credentials , fileName , userSets):
 	try:
-		if fileName.find('&&&') != -1: print "Because of how request data is sent to the server, the file name cannot contain '&&&'"
+		if fileName.find('&&&') != -1: return "Because of how request data is sent to the server, the file name cannot contain '&&&'"
 		else:
-			fout = open(userSets['senddir'] + fileName , 'rb')
-			fileLen = getFileSize(fout)
+			fileLoc = userSets['senddir'] + fileName
+			fileLen = str(os.path.getsize(fileLoc))
 			if fileLen == 0: return 'Server will not accept empty files'
 			if fileName.find('/') != -1: fileName = fileName[fileName.rfind('/')+1:]
-			checksum = hashFile(fout , hashlib.sha512())
+			fout = open(fileLoc , 'rb')
+			outputData = fout.readlines()
+			fout.close()
+			checksum = hashFile(fileLoc , hashlib.sha256())
 			DATA = credentials + '&&&' + fileName + '&&&' + checksum + '&&&' + str(fileLen)
 			clientSocket = socket(AF_INET , SOCK_STREAM)
 			clientSocket.connect((serverName , serverPort))
@@ -45,10 +48,10 @@ def sendFile(credentials , fileName , userSets):
 			sent = clientSocket.send(DATA)  #Server verifies checksum has changed and preps file for contents
 			rec = clientSocket.recv(socketRecvBuffer)
 			if rec.find('&&&') != -1:  #Send file contents
+				startProgress('Upload')
 				fileBuffer = int(rec.split('&&&')[0])
 				serverRecvBuffer = int(rec.split('&&&')[1])
 				curBuffer = 0
-				outputData = fout.readlines()
 				for line in outputData:
 					while len(line) > 0:
 						if len(line) > serverRecvBuffer:
@@ -58,11 +61,14 @@ def sendFile(credentials , fileName , userSets):
 							curBuffer += clientSocket.send(line)
 							line = ''
 						if curBuffer >= fileBuffer:
-							rec = clientSocket.recv(socketRecvBuffer)
-							if rec != 'cont':
+							recvLen = clientSocket.recv(socketRecvBuffer)
+							if not recvLen.isdigit():
 								clientSocket.close()
-								return rec
+								endProgress()
+								return recvLen
+							progress(int(float(recvLen) / fileLen * 100))
 							curBuffer = 0
+				endProgress()
 				rec = clientSocket.recv(socketRecvBuffer)
 			clientSocket.close()
 			return rec
@@ -75,23 +81,34 @@ def recvFile(credentials , fileName , userSets):
 		clientSocket.connect((serverName , serverPort))
 		clientSocket.settimeout(defaultTimeout)
 		clientSocket.send(credentials+'&&&'+fileName)
-		fileLen = clientSocket.recv(socketRecvBuffer)
+		rec = clientSocket.recv(socketRecvBuffer).split('&&&')
+		fileLen = rec[0]
 		if not fileLen.isdigit(): return fileLen
+		fileLen = int(fileLen)
+		recvChecksum = rec[1]
 		if fileName.find('/'): fileName = fileName[fileName.find('/')+1:]
-		fin = file(userSets['destdir'] + fileName , 'wb')
+		fileLoc = userSets['destdir'] + fileName
+		fin = file(fileLoc , 'wb')
 		finLen = 0 #current length of recieving file
 		curBuffer = 0
 		clientSocket.send(str(fileBuffer)+'&&&'+str(socketRecvBuffer))
+		startProgress('Download')
 		##--Recieve file of variable length--##
-		while finLen < int(fileLen):
+		while finLen < fileLen:
 			line = clientSocket.recv(socketRecvBuffer)
+			fin.write(line)
+			finLen = getFileSize(fin)
 			curBuffer += len(line)
 			if curBuffer >= fileBuffer:
 				clientSocket.send('cont')
+				progress(int(float(finLen) / fileLen * 100))
 				curBuffer = 0
-			fin.write(line)
-			finLen = getFileSize(fin)
 		fin.close()
+		endProgress()
+		checksum = hashFile(fileLoc , hashlib.sha256())
+		if checksum != recvChecksum:
+			clientSocket.send('checksumError')
+			return 'File Recieve Error: Checksum did not match. Downloaded file might be corrupted. Try getting again'
 		clientSocket.send('success')
 		clientSocket.close()
 		return 'File recieved'
@@ -150,14 +167,16 @@ def getKeyString(dic , linsep , valsep=''):
 	return ret
 
 ##--Returns checksum for given file using given hash--##
-##Ex:  hashfile(open(fileName, 'rb'), hashlib.sha256())   #must be in r mode
-def hashFile(afile, hasher, blocksize=65536):
-	buf = afile.read(blocksize)
+##Ex:  hashFile(fileName , hashlib.sha256())
+##Note: You CANNOT give hasher a default value. Hasher object would be carried over each function call spitting out inconsistent values
+def hashFile(fileLoc , hasher , blocksize=65536):
+	fileObj = open(fileLoc , 'rb')
+	buf = fileObj.read(blocksize)
 	while len(buf) > 0:
 		hasher.update(buf)
-		buf = afile.read(blocksize)
-	afile.seek(0)
-	return hasher.digest()
+		buf = fileObj.read(blocksize)
+	fileObj.close()
+	return hasher.hexdigest()
 
 ##--Save user settings--##
 def saveStorage(*data):
@@ -207,3 +226,19 @@ def getInput(prompt = ''):
 	ret = raw_input(prompt)
 	if ret == '#quit': sys.exit()
 	else: return ret
+
+##--Create, update, and close a single-line progress bar--##
+##--Credit to '6502' at 'http://stackoverflow.com/questions/6169217/replace-console-output-in-python'--##
+def startProgress(title):
+    sys.stdout.write(title + ': [' + ' '*40 + ']' + chr(8)*41)
+    sys.stdout.flush()
+    globals()['progress_x'] = 0
+def progress(x):  #x = percent complete, range(0,100)
+    x = x*40//100
+    sys.stdout.write('='*(x - globals()['progress_x']))
+    sys.stdout.flush()
+    globals()['progress_x'] = x
+def endProgress():
+    sys.stdout.write('='*(40 - globals()['progress_x']))
+    sys.stdout.write(']\n')
+    sys.stdout.flush()

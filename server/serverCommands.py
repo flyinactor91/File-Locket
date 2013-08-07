@@ -3,15 +3,18 @@
 import hashlib , os , shutil , zipfile , time
 
 ##--Send a given file through a given socket and return appropriate message--##
-def sendFile(connectionSocket , fileObj , socketRecvBuffer):
-	fileLen = str(getFileSize(fileObj))
-	connectionSocket.send(fileLen)
+def sendFile(connectionSocket , fileLoc , socketRecvBuffer):
+	fout = open(fileLoc , 'rb')
+	outputData = fout.readlines()
+	fout.close()
+	fileLen = str(os.path.getsize(fileLoc))
+	checksum = hashFile(fileLoc , hashlib.sha256())
+	connectionSocket.send(fileLen + '&&&' + checksum)
 	rec = connectionSocket.recv(socketRecvBuffer)
 	if rec.find('&&&') != -1:
 		fileBuffer = int(rec.split('&&&')[0])
 		clientRecvBuffer = int(rec.split('&&&')[1])
 		curBuffer = 0
-		outputData = fileObj.readlines()
 		for line in outputData:
 			while len(line) > 0:
 				if len(line) > clientRecvBuffer:
@@ -22,12 +25,14 @@ def sendFile(connectionSocket , fileObj , socketRecvBuffer):
 					line = ''
 				if curBuffer >= fileBuffer:
 					rec = connectionSocket.recv(socketRecvBuffer)
-					if rec != 'cont': return 'Error: recieve mid stream'
+					if rec != 'cont':
+						return 'Error: recieve mid stream'
 					curBuffer = 0
 		rec = connectionSocket.recv(socketRecvBuffer)
 		if rec == 'success': return 'success'
 		else: return 'Error: recieve end stream'
-	else: return 'Error: recieve pre stream'
+	else:
+		return 'Error: recieve pre stream'
 	
 
 ##--Returns a formatted string of dictionary keys and --##
@@ -74,13 +79,16 @@ def checkCreds(userName , sessionID , dic , foutput):
 		return 'Error: Username does not exist'
 
 ##--Returns checksum for given file using given hash--##
-##Ex:  hashfile(open(fileName, 'rb'), hashlib.sha256())   must be in r mode
-def hashFile(fileObj , hasher , blocksize=65536):
-    buf = fileObj.read(blocksize)
-    while len(buf) > 0:
-        hasher.update(buf)
-        buf = fileObj.read(blocksize)
-    return hasher.digest()
+##Ex:  hashFile(fileName , hashlib.sha256())
+##Note: You CANNOT give hasher a default value. Hasher object would be carried over each function call spitting out inconsistent values
+def hashFile(fileLoc , hasher , blocksize=65536):
+	fileObj = open(fileLoc , 'rb')
+	buf = fileObj.read(blocksize)
+	while len(buf) > 0:
+		hasher.update(buf)
+		buf = fileObj.read(blocksize)
+	fileObj.close()
+	return hasher.hexdigest()
 
 ##--Writes a string to a file if one is open or the console if one is not--##
 def outputMsg(fileObj , msg):

@@ -10,7 +10,7 @@ import pickle , sys , platform
 aboutString = """
 File Locket
 Created by Michael duPont (flyinactor91@gmail.com)
-v1.2.xa [2013-08-04]
+v1.3.0 [2013-08-07]
 Python 2.7.4 - Unix
 """
 
@@ -61,9 +61,11 @@ noteString = """
 	Bug fixes
 	Code reduction
 
-1.2.xa [2013-08-04]
-	Check version on startup
+1.3.0 [2013-08-07]
 	Notification system
+	Up/Download progress bar
+	Check version on startup
+	Checksum checks for all transfers
 	Client and Server improvements
 	Bug fixes"""
 
@@ -89,7 +91,7 @@ helpStrings = {'sendfile':'\nsendfile (local file)\nSends a file to the server.'
 ##--Main Client Function--##
 def main():
 	
-	clientVersion = '1.2.0'
+	clientVersion = '1.3.0'
 	
 	try:
 		##--Load in (via pickle) client storage values--##
@@ -176,7 +178,7 @@ def main():
 						if verNum != '#quit':
 							if int(verNum) != 0 and int(verNum)-1 in range(len(ret[0].split('\n'))-3):
 								fileName = ret[1]
-								print recvFile('recvver&&&'+credentials , fileName+'/'+str(int(verNum)-1)+'%%%'+fileName , userSets)
+								print recvFile('recvver&&&'+credentials , fileName+'/'+verNum+'%%%'+fileName , userSets)
 							else: print 'Error: Not an applicable number'
 			elif len(command) == 3:
 				fileName = command[2]
@@ -187,11 +189,11 @@ def main():
 					if verNum != '#quit':
 						if int(verNum) != 0 and int(verNum)-1 in range(len(ret.split('\n'))-3):
 							fileName = command[2]
-							print recvFile('recvver&&&'+credentials , fileName+'/'+str(int(verNum)-1)+'%%%'+fileName , userSets)
+							print recvFile('recvver&&&'+credentials , fileName+'/'+verNum+'%%%'+fileName , userSets)
 						else: print 'Error: Not an applicable number'
 			elif len(command) == 4 and command[1] == 'get':
 				fileName = command[2]
-				verNum = str(int(command[3])-1)
+				verNum = command[3]
 				print recvFile('recvver&&&'+credentials , fileName+'/'+verNum+'%%%'+fileName , userSets)
 			else: print '\nversions [command] (file on server) (version #)\nAvailable commands: get, view'
 
