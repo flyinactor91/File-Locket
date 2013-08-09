@@ -1,3 +1,5 @@
+##--Michael duPont
+##--v1.3.0 [2013-08-07]
 ##--Function order:
 ##--Main functions: sendData , sendFile , recvFile , viewFileAndSend , startUp
 ##--Minor functions: saltHash , getFileSize , getKeyString , hashFile , saveStorage , getUnPw , compareVersions , getInput , ProgressBar
@@ -34,7 +36,7 @@ def sendFile(credentials , fileName , userSets):
 		if fileName.find('&&&') != -1: return "Because of how request data is sent to the server, the file name cannot contain '&&&'"
 		else:
 			fileLoc = userSets['senddir'] + fileName
-			fileLen = str(os.path.getsize(fileLoc))
+			fileLen = int(os.path.getsize(fileLoc))
 			if fileLen == 0: return 'Server will not accept empty files'
 			if fileName.find('/') != -1: fileName = fileName[fileName.rfind('/')+1:]
 			fout = open(fileLoc , 'rb')
