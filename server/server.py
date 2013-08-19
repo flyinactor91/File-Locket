@@ -19,7 +19,7 @@ def main():
 	socketRecvBuffer = 1024			#  2**x
 	maxConnectedClients = 1			#  Number of simultaneous clients that the server will accept
 	fileBuffer = 500000				#  Amount of bits for server to recv and process at a time. View dev notes
-	outputToFile = True				#  Server log sent to .txt (True) or sent to terminal (False)
+	outputToFile = False				#  Server log sent to .txt (True) or sent to terminal (False)
 	##--End settings--##
 	
 	serverVersion = '1.3.0 [2013-08-07]'

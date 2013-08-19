@@ -10,16 +10,16 @@ import pickle , sys , platform
 aboutString = """
 File Locket
 Created by Michael duPont (flyinactor91@gmail.com)
-v1.3.0 [2013-08-07]
+v1.3.0 [2013-08-19]
 Python 2.7.4 - Unix
 """
 
 helpString = """
 Available commands:
-	sendfile	Send a file to the server
-	getfile		Get a file from the server
+	sendfile	Send files to the server
+	getfile		Get files from the server
 	viewfiles	View stored files
-	delfile		Delete a file on the server
+	delfile		Delete files on the server
 	versions	File version options
 	archive		Get all files on server (versions if true)
 	set		Change program settings
@@ -67,12 +67,16 @@ noteString = """
 	Check version on startup
 	Checksum checks for all transfers
 	Client and Server improvements
-	Bug fixes"""
+	Bug fixes
+	
+1.3.xa [2013-08-19]
+	Send, get, del multiple files
+	Admin send multi-user alert"""
 
-helpStrings = {'sendfile':'\nsendfile (local file)\nSends a file to the server.',
-			   'getfile':'\ngetfile (file on server)\nRecieve a file from the server\nCalling getfile without file name calls viewfiles and a prompt',
+helpStrings = {'sendfile':'\nsendfile (local files*)\nSend one or more files to the server.',
+			   'getfile':'\ngetfile (files on server*)\nRecieve one or more files from the server\nCalling getfile without file name calls viewfiles and a prompt',
 			   'viewfiles':"\nviewfiles\nDisplays all the user's files stored on the server",
-			   'delfile':'\ndelfile (file on server)\nPerminantly delete a file and its saved versions from the server\nCalling delfile without file name calls viewfiles and a prompt',
+			   'delfile':'\ndelfile (files on server*)\nPerminantly delete a file and its saved versions from the server\nCalling delfile without file name calls viewfiles and a prompt',
 			   'versions':'\nversions [command] (file on server) (file version #)\nAvailable commands:\n\tview - View all the versions of a file stored on the server\n\tget - Recieve a file version from the server',
 			   'archive':"\narchive (true)\nRecieve a .zip archive of files stored on the server\nAlso includes the file versions if call followed by 'true'",
 			   'set':"\nset (var) (value)\nUser can change program settings\nCalling set with only a var displays that var's value\nCall set by itself for a list of available vars",
@@ -83,7 +87,7 @@ helpStrings = {'sendfile':'\nsendfile (local file)\nSends a file to the server.'
 			   'quit':'\nquit\nExits the program without logging out',
 			   'adminshowusers':'\nadminshowusers\nDisplays a list of all users signed up on this server\nRequires server password',
 			   'adminserverstats':'\nadminserverstats\nDisplays general information about the server like number of users and approximate server size\nRequires server password',
-			   'adminsendalert':'\nadminsendalert (target user) (alert)\nSend a single-user or system-wide alert\nSetting "all" as the targeted user sends alert to all users\nRequires server password',
+			   'adminsendalert':'\nadminsendalert (alert) (target user*)\nSend a single-user, multi-user, or system-wide alert\nSetting "all" as the targeted user sends alert to all users\nRequires server password',
 			   'adminclear':"\nadminclear\nResets the server's data storage and saves a backup of the previous files and data\nThis function cannot be called again while the previous backup exists\nRequires server password",
 			   'adminshutdown':'\nadminshutdown\nRemotely shutdown the server\nRequires server password'}
 
@@ -144,7 +148,8 @@ def main():
 			if len(command) == 1:
 				fileName = raw_input('File name: ')
 				if fileName != '#quit': print sendFile(command[0]+'&&&'+credentials , fileName , userSets)
-			elif len(command) == 2: print sendFile(command[0]+'&&&'+credentials , command[1] , userSets)
+			elif len(command) >= 2:
+				for i in range(1,len(command)): print sendFile(command[0]+'&&&'+credentials , command[i] , userSets)
 			else: print 'sendfile (local file)'
 
 		##--Recieve a file from the server--##
@@ -157,13 +162,15 @@ def main():
 					if fileName != '#quit':
 						if fileName in ret.split('\n'): print recvFile('recvfile&&&'+credentials , fileName , userSets)
 						else: print 'Error: Not an available file'
-			elif len(command) == 2: print recvFile('recvfile&&&'+credentials , command[1] , userSets)
+			elif len(command) >= 2:
+				for i in range(1,len(command)): print recvFile('recvfile&&&'+credentials , command[i] , userSets)
 			else: print 'getfile (file on server)'
 
 		##--Delete a file on the server--##
 		elif command[0] == 'delfile':
 			if len(command) == 1: print viewFileAndSend(credentials , command[0] , userSets)
-			elif len(command) == 2: print sendData('delfile&&&'+credentials+'&&&'+command[1])
+			elif len(command) >= 2:
+				for i in range(1,len(command)): print sendData('delfile&&&'+credentials+'&&&'+command[i])
 			else: print 'delfile (file on server)'
 
 		##--View file versions (and) get a versioned file from the server--##
@@ -255,21 +262,33 @@ def main():
 		##--Also remove admin controls from helpString and helpStrings
 
 		##--Admin actions if password is correct:--##
-		elif command[0] in ['adminshutdown','adminclear','adminshowusers','adminserverstats','adminsendalert']:
-			password = getpass.getpass('Server Password: ') #Ask for password to send to server
-			if password == '#quit': sys.exit()
-			alert = ''
-			if command[0] == 'adminsendalert':
-				if len(command) == 1: alert = '&&&' + raw_input('Target user: ') + '&&&'+ raw_input('Alert to send: ')
-				elif len(command) == 2: alert = '&&&' + command[1] + '&&&'+ raw_input('Alert to send: ')
-				else: alert = '&&&' + command[1] + '&&&'+ command[2]
-			resp = sendData(command[0]+'&&&'+credentials+'&&&'+saltHash(password , 'masteradmin')+alert)
-			if type(resp) != type(None):
+		elif command[0] in ['adminshutdown','adminclear','adminshowusers','adminserverstats']:
+			password = saltHash(getpass.getpass('Server Password: ') , 'masteradmin') #Ask for password to send to server
+			if password != '#quit':
+				resp = sendData(command[0]+'&&&'+credentials+'&&&'+password)
 				print resp
 				if command[0] == 'adminshutdown' and resp[:5] != 'Error': quitFlag = True
 				elif command[0] == 'adminclear' and resp[:5] != 'Error':
 					userName = ''
 					quitFlag = True
+
+		elif command[0] == 'adminsendalert':
+			password = saltHash(getpass.getpass('Server Password: ') , 'masteradmin') #Ask for password to send to server
+			if password != '#quit':
+				if len(command) > 2:
+					for i in range(2 , len(command)):
+						resp = sendData('adminsendalert&&&'+credentials+'&&&'+password+'&&&'+command[i]+'&&&'+command[1])
+						print resp
+				else:
+					if len(command) == 1:
+						alert = raw_input('Alert to send: ')
+						user = raw_input('Target user: ')
+					elif len(command) == 2:
+						alert = command[1]
+						user = raw_input('Target user: ')
+					resp = sendData('adminsendalert&&&'+credentials+'&&&'+password+'&&&'+user+'&&&'+alert)
+					print resp
+				
 		
 		##------------------------------------------------------------------------------------------##
 
