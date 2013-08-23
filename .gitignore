@@ -1,4 +1,5 @@
 $ cat .gitignore
 
+.pyc
 .pkl
 *~
