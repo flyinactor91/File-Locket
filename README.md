@@ -1,12 +1,12 @@
 File Locket
 =========
-**v1.3.0 [2013-08-07]**
+**v1.3.1 [2013-09-05]**
 
 Simple file storage service to store, access, and delete files.
 
 Created by Michael duPont ([flyinactor91.com](https://flyinactor91.com))
 
-Python 2.7.4 - Unix
+Python 2.7.5 - Unix
 
 Found at [https://github.com/flyinactor91/File-Locket](https://github.com/flyinactor91/File-Locket)
 
@@ -140,7 +140,7 @@ Release Notes
 
 * Windows/NT support
 
-* #up for directory control
+* '#up' for directory control
 
 * Signup verifies password
 
@@ -163,3 +163,13 @@ Release Notes
 * Client and Server improvements
 
 * Bug fixes
+
+1.3.1 [2013-09-05]
+
+* Send, get, del multiple files
+
+* Admin send multi-user alert
+
+* Bug fixes
+
+* Code readability

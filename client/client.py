@@ -3,17 +3,21 @@
 ##--Michael duPont
 ##--Change "serverName" in clientCommands to IP of server host before running
 
+##--Note that (...) is optional and [...] is required
+
 from clientCommands import *
 from socket import *
 import pickle , sys , platform
 
+##--General info--##
 aboutString = """
 File Locket
 Created by Michael duPont (flyinactor91@gmail.com)
-v1.3.0 [2013-08-19]
-Python 2.7.4 - Unix
+v1.3.1 [2013-09-05]
+Python 2.7.5 - Unix
 """
 
+##--List of commands--##
 helpString = """
 Available commands:
 	sendfile	Send files to the server
@@ -36,8 +40,11 @@ Admin Tools (requires server pw):
 	adminclear		Clears all server lib data
 	adminshutdown		Shuts down server and saves data
 
-Typing #quit into a prompt exits that prompt"""
+Typing #quit into a prompt exits that prompt
+(...) is optional and [...] is required
+(...*) indicates multiple items can be entered"""
 
+##--Release notes--##
 noteString = """
 1.0.0 [2013-03-28]
 	Initial release
@@ -48,7 +55,7 @@ noteString = """
 	File transfer improvements
 	Server improvements
 
-1.1.1 [2013-07-23]
+1.1.1 [2013-04-23]
 	User and server statistics
 	Recieve file archive
 	Client and Server improvements
@@ -69,10 +76,13 @@ noteString = """
 	Client and Server improvements
 	Bug fixes
 	
-1.3.xa [2013-08-19]
+1.3.1 [2013-09-05]
 	Send, get, del multiple files
-	Admin send multi-user alert"""
+	Admin send multi-user alert
+	Bug fixes
+	Code readability"""
 
+##--More detailed help for each command--##
 helpStrings = {'sendfile':'\nsendfile (local files*)\nSend one or more files to the server.',
 			   'getfile':'\ngetfile (files on server*)\nRecieve one or more files from the server\nCalling getfile without file name calls viewfiles and a prompt',
 			   'viewfiles':"\nviewfiles\nDisplays all the user's files stored on the server",
@@ -87,18 +97,22 @@ helpStrings = {'sendfile':'\nsendfile (local files*)\nSend one or more files to 
 			   'quit':'\nquit\nExits the program without logging out',
 			   'adminshowusers':'\nadminshowusers\nDisplays a list of all users signed up on this server\nRequires server password',
 			   'adminserverstats':'\nadminserverstats\nDisplays general information about the server like number of users and approximate server size\nRequires server password',
-			   'adminsendalert':'\nadminsendalert (alert) (target user*)\nSend a single-user, multi-user, or system-wide alert\nSetting "all" as the targeted user sends alert to all users\nRequires server password',
+			   'adminsendalert':'\nadminsendalert (target user*) #(alert)\nSend a single-user, multi-user, or system-wide alert\nSetting "all" as the targeted user sends alert to all users\nType "#" before the alert\nRequires server password',
 			   'adminclear':"\nadminclear\nResets the server's data storage and saves a backup of the previous files and data\nThis function cannot be called again while the previous backup exists\nRequires server password",
 			   'adminshutdown':'\nadminshutdown\nRemotely shutdown the server\nRequires server password'}
+
+##--The non-alpha version number of the client to compare with that of the server. Ex. 1.3.0--##
+clientVersion = '1.3.1'
+
 
 
 ##--Main Client Function--##
 def main():
 	
-	clientVersion = '1.3.0'
+	##--Startup actions--##
 	
+	##--Create client data by trying to load the .pkl storage file. If no file is found (aka first run), declare default values--##
 	try:
-		##--Load in (via pickle) client storage values--##
 		storageFile = open('ClientStorage.pkl', 'rb')
 		userName = pickle.load(storageFile)
 		sessionID = pickle.load(storageFile)
@@ -117,7 +131,7 @@ def main():
 	if compare == 1: print '\n\nClient ('+clientVersion+') is running a newer version and might not work with the server ('+serverData+')\n\n'
 	#Can change to 'if serverVersion not in [list of acceptable versions]'
 	
-	##--Ask user for name and init--##
+	##--If first run or last user logged out, run signup/login--##
 	if userName == '':
 		while userName == '':
 			lin = getInput('Login or Sign up? (L/S) : ').lower()
@@ -126,8 +140,10 @@ def main():
 			else: print 'Not an option. Use #quit to exit\n'
 		##--Save userName and sessionID--##
 		saveStorage(userName , sessionID , userSets)
-	else:
-		print 'Welcome back' , userName
+	##--Else print welcome back message so user can double check that they are the one logged in--##
+	else: print 'Welcome back' , userName
+	
+	##--If user setting startalert is true, contact server for current number of alerts and display if not zero--##
 	if userSets['startalert']:
 		alertNum = sendData('alertNum&&&'+userName)
 		if alertNum.isdigit():
@@ -137,22 +153,26 @@ def main():
 		else: print 'Alert ' + alertNum
 	print 'Program Info:  #about , #help (command) , #notes'
 
+
+
+	##--Core program--##
+	
 	##--Command Loop--##
 	quitFlag = False
 	while not quitFlag:
-		command = raw_input('\ncmd: ').split(' ')   #Ask user for command input
+		commandRaw = raw_input('\ncmd: ')   #Ask user for command input
+		command = commandRaw.split(' ')
 		credentials = userName + '&&&' + sessionID
 
-		##--Send a file to the server--##
+		##--Send one or more files to the server--##
 		if command[0] == 'sendfile':
 			if len(command) == 1:
 				fileName = raw_input('File name: ')
 				if fileName != '#quit': print sendFile(command[0]+'&&&'+credentials , fileName , userSets)
-			elif len(command) >= 2:
+			else:
 				for i in range(1,len(command)): print sendFile(command[0]+'&&&'+credentials , command[i] , userSets)
-			else: print 'sendfile (local file)'
 
-		##--Recieve a file from the server--##
+		##--Recieve one or more files from the server--##
 		elif command[0] == 'getfile':
 			if len(command) == 1:
 				ret = sendData('viewfiles&&&'+credentials) #Server sends list of files (if any)
@@ -164,9 +184,8 @@ def main():
 						else: print 'Error: Not an available file'
 			elif len(command) >= 2:
 				for i in range(1,len(command)): print recvFile('recvfile&&&'+credentials , command[i] , userSets)
-			else: print 'getfile (file on server)'
 
-		##--Delete a file on the server--##
+		##--Delete one or more files on the server--##
 		elif command[0] == 'delfile':
 			if len(command) == 1: print viewFileAndSend(credentials , command[0] , userSets)
 			elif len(command) >= 2:
@@ -211,31 +230,52 @@ def main():
 
 		##--Change user settings--##
 		elif command[0] == 'set':
+			
+			##--If no setting name given, print Usage and all setting names--##
 			if len(command) == 1: print '\nset (var) (value)\nClear var value with #clear\nVariables that can be set:' + getKeyString(userSets , '\n\t') + '\ndir settings support:\n\t~ for home dir\n\t#cwd for curdir\n\t#up to move up one dir'
+			
+			##--If a valid setting name--##
 			elif command[1] in userSets:
+				
+				##--If only setting name given, print its value--##
 				if len(command) == 2:
 					setVal = userSets[command[1]]
 					if setVal == '': setVal = 'No value set'
 					print command[1] + ':  ' + str(setVal)
+				
+				##--Else, change the value of given setting--##
 				else:
+					
+					##--Clear value of given setting--##
 					if command[2] == '#clear': userSets[command[1]] = ''
+					
+					##--Directory controls for senddir and destdir--##
 					elif command[1] == 'senddir' or command[1] == 'destdir':
+						##--Replace ~ with home directory. Ex ~/Documents --> /home/user/Documents
 						if command[2][:1] == '~': command[2] = os.path.expanduser(command[2])
+						##--Replace #cwd with current working directory
 						elif command[2][:4] == '#cwd': command[2] = command[2].replace('#cwd' , os.getcwd() , 1)
+						##--Replace last folder with what follows. Ex /A/B/C --> #up/D --> /A/B/D
 						elif command[2][:3] == '#up':
 							oldDir = userSets[command[1]]
 							if platform.system() == 'Windows': command[2] = command[2].replace('#up' , oldDir[:oldDir[:len(oldDir)-1].rfind('\\')])
 							else: command[2] = command[2].replace('#up' , oldDir[:oldDir[:len(oldDir)-1].rfind('/')])
+						##--Make sure directory location ends with / or \\
 						if (command[2][len(command[2])-1:] != '/') and (command[2] != ''):
 							if platform.system() == 'Windows': command[2] += '\\'
 							else: command[2] += '/'
+						##--Check if path is a valid directory. If it is, set new value. If not, print error
 						if not os.path.isdir(command[2]):
 							print command[2] + ' is not a directory'
 						else: userSets[command[1]] = command[2]
+					
+					##--Set startalert value to boolean True of False--##
 					elif command[1] == 'startalert':
 						if command[2][:1].lower() == 't': userSets[command[1]] = True
 						elif command[2][:1].lower() == 'f': userSets[command[1]] = False
 						else: print 'On/Off values can only be set True/False'
+			
+			##--Catch invalid setting name--##
 			else: print command[1] + ' is not an available setting'
 
 		##--viewfiles - Returns a list  of files stored on the server--##
@@ -248,10 +288,10 @@ def main():
 		elif command[0] == 'alerts':
 			if len(command) == 1:
 				print '\nalerts [command]\nAvailable commands: view , clear'
-			elif command[1] == 'view': print sendData('viewalerts&&&'+credentials+'&&&True')
+			elif command[1] == 'view': print sendData('viewalerts&&&'+credentials+'&&&True')	#True tells server to send the actual messages
 			elif command[1] == 'clear': print sendData('clearalerts&&&'+credentials)
 		
-		##--Log user out of program and shutdown--##
+		##--Log user out of program (clear user data) and shutdown--##
 		elif command[0] == 'logout':
 			userName , sessionID = '' , ''
 			userSets = {'senddir':'','destdir':'','startalert':True}
@@ -261,33 +301,34 @@ def main():
 		##--Remove the following lines to create a client without access to admin controls
 		##--Also remove admin controls from helpString and helpStrings
 
-		##--Admin actions if password is correct:--##
+		##--Admin controls without further input--##
 		elif command[0] in ['adminshutdown','adminclear','adminshowusers','adminserverstats']:
 			password = saltHash(getpass.getpass('Server Password: ') , 'masteradmin') #Ask for password to send to server
 			if password != '#quit':
 				resp = sendData(command[0]+'&&&'+credentials+'&&&'+password)
 				print resp
-				if command[0] == 'adminshutdown' and resp[:5] != 'Error': quitFlag = True
-				elif command[0] == 'adminclear' and resp[:5] != 'Error':
-					userName = ''
-					quitFlag = True
+				if command[0] == 'adminshutdown' and resp[:5] != 'Error': quitFlag = True	#If succesful server shutdown
+				elif command[0] == 'adminclear' and resp[:5] != 'Error': username , quitFlag = '' , True	#If succesful server wipe
 
+		##--Adminsenalert requires usernames and message to send--##
 		elif command[0] == 'adminsendalert':
 			password = saltHash(getpass.getpass('Server Password: ') , 'masteradmin') #Ask for password to send to server
 			if password != '#quit':
+				##--If more than one target user--##
 				if len(command) > 2:
-					for i in range(2 , len(command)):
-						resp = sendData('adminsendalert&&&'+credentials+'&&&'+password+'&&&'+command[i]+'&&&'+command[1])
-						print resp
+					if commandRaw.find('#') != -1: #Inner if prevents flowing into 'else' statement
+						users = commandRaw[len(command[0])+1:commandRaw.find('#')-1].split(' ')
+						for user in users: print sendData('adminsendalert&&&'+credentials+'&&&'+password+'&&&'+user+'&&&'+commandRaw[commandRaw.find('#')+1:])
+					else: print 'No "#" was found before the alert'
+				##--If only one target user--##
 				else:
 					if len(command) == 1:
+						user = raw_input('Target user: ')
 						alert = raw_input('Alert to send: ')
-						user = raw_input('Target user: ')
 					elif len(command) == 2:
-						alert = command[1]
-						user = raw_input('Target user: ')
-					resp = sendData('adminsendalert&&&'+credentials+'&&&'+password+'&&&'+user+'&&&'+alert)
-					print resp
+						user = command[1]
+						alert = raw_input('Alert to send: ')
+					print sendData('adminsendalert&&&'+credentials+'&&&'+password+'&&&'+user+'&&&'+alert)
 				
 		
 		##------------------------------------------------------------------------------------------##
@@ -313,6 +354,9 @@ def main():
 		else: print 'Not a recognised command'
 
 		##--End Command Loop--##
+
+
+	##--Shutdown actions--##
 
 	##--Save userName and sessionID--##
 	saveStorage(userName , sessionID , userSets)

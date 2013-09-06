@@ -1,34 +1,46 @@
 ##--Michael duPont
-##--v1.3.0 [2013-08-07]
+##--v1.3.1 [2013-09-05]
 ##--Function order: sendFile , getKeyString , getNumListString , getFileSize , getFolderSize , checkCreds , hashFile , outputMsg , makeZip , criticalError
 
 import hashlib , os , shutil , zipfile , time
 
+
+
 ##--Send a given file through a given socket and return appropriate message--##
 def sendFile(connectionSocket , fileLoc , socketRecvBuffer):
+	##--Get file contents--##
 	fout = open(fileLoc , 'rb')
 	outputData = fout.readlines()
 	fout.close()
+	
+	##--Send client file length and checksum
 	fileLen = str(os.path.getsize(fileLoc))
 	checksum = hashFile(fileLoc , hashlib.sha256())
 	connectionSocket.send(fileLen + '&&&' + checksum)
+	
+	##--Recieve fileBuffer and ClientRecvBuffer
 	rec = connectionSocket.recv(socketRecvBuffer)
 	if rec.find('&&&') != -1:
 		fileBuffer = int(rec.split('&&&')[0])
 		clientRecvBuffer = int(rec.split('&&&')[1])
 		curBuffer = 0
+		
+		##--Send file contents--##
 		for line in outputData:
 			while len(line) > 0:
+				
+				##--Send only what doesn't exceed what the client can recieve at one time--##
 				if len(line) > clientRecvBuffer:
 					curBuffer += connectionSocket.send(line[:clientRecvBuffer])
 					line = line[clientRecvBuffer:]
 				else:
 					curBuffer += connectionSocket.send(line)
 					line = ''
+				
+				##--Waits for client to send 'cont' before continuing--##
 				if curBuffer >= fileBuffer:
 					rec = connectionSocket.recv(socketRecvBuffer)
-					if rec != 'cont':
-						return 'Error: recieve mid stream'
+					if rec != 'cont': return 'Error: recieve mid stream'
 					curBuffer = 0
 		rec = connectionSocket.recv(socketRecvBuffer)
 		if rec == 'success': return 'success'
@@ -82,7 +94,7 @@ def checkCreds(userName , sessionID , dic , foutput):
 
 ##--Returns checksum for given file using given hash--##
 ##Ex:  hashFile(fileName , hashlib.sha256())
-##Note: You CANNOT give hasher a default value. Hasher object would be carried over each function call spitting out inconsistent values
+##Note: You CANNOT CANNOT CANNOT give hasher a default value. Hasher object would be carried over each function call spitting out inconsistent values
 def hashFile(fileLoc , hasher , blocksize=65536):
 	fileObj = open(fileLoc , 'rb')
 	buf = fileObj.read(blocksize)

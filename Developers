@@ -1,13 +1,13 @@
 File Locket
 Created by Michael duPont (flyinactor91@gmail.com)
-v1.3.0 [2013-08-07]
-Python 2.7.4 - Unix
+v1.3.1 [2013-09-05]
+Python 2.7.5 - Unix
 
 A brief overview of data structures and improvements/issues
 
 
 Client:
-userSets = {'senddir' , 'destdir'}
+userSets = {'senddir' , 'destdir' , 'startalert'}
 Storage pickle save/load order: userName, sessionID, userSets
 File encryption would be implemented with client-side keys before transmission
 --Currently trying to work out how to store key-derivation on server for when client logs into a new session

@@ -1,5 +1,5 @@
 ##--Michael duPont
-##--v1.3.0 [2013-08-07]
+##--v1.3.1 [2013-09-05]
 ##--Function order:
 ##--Main functions: sendData , sendFile , recvFile , viewFileAndSend , startUp
 ##--Minor functions: saltHash , getFileSize , getKeyString , hashFile , saveStorage , getUnPw , compareVersions , getInput , ProgressBar
@@ -7,22 +7,25 @@
 from socket import *
 import hashlib , getpass , os , pickle , sys
 
-##--Server connection settings--##
+##--Client connection settings--##
 serverName = 'localhost'  	#  Change to IP address of server computer
 serverPort = 60145			#  Should match that int set on server
 defaultTimeout = 5			#  Timeout used for normal connection conditions
 socketRecvBuffer = 1024		#  2**x
 fileBuffer = 500000			#  Amount of bits for server to recv and process at a time. View dev notes
+##--End settings--##
+
+
 
 ##--Send a single string of data and recieve a single string of data--##
 def sendData(DATA):
 	try:
-		totalsent = 0
 		clientSocket = socket(AF_INET , SOCK_STREAM)
 		clientSocket.connect((serverName , serverPort))
 		clientSocket.settimeout(defaultTimeout)
-		while totalsent < len(DATA):
-			sent = clientSocket.send(DATA[totalsent:])
+		totalsent = 0
+		while totalsent < len(DATA):	#clientSocket might not send the entire string with one call
+			sent = clientSocket.send(DATA[totalsent:])	#Returns int of chars sent
 			totalsent = totalsent + sent
 		ret = clientSocket.recv(socketRecvBuffer)
 		clientSocket.close()
@@ -33,68 +36,93 @@ def sendData(DATA):
 ##--Sends a file (regardless of contents or size) to the server--##
 def sendFile(credentials , fileName , userSets):
 	try:
+		##--Catch input that would throw off server--##
 		if fileName.find('&&&') != -1: return "Because of how request data is sent to the server, the file name cannot contain '&&&'"
-		else:
-			fileLoc = userSets['senddir'] + fileName
-			fileLen = int(os.path.getsize(fileLoc))
-			if fileLen == 0: return 'Server will not accept empty files'
-			if fileName.find('/') != -1: fileName = fileName[fileName.rfind('/')+1:]
-			fout = open(fileLoc , 'rb')
-			outputData = fout.readlines()
-			fout.close()
-			checksum = hashFile(fileLoc , hashlib.sha256())
-			DATA = credentials + '&&&' + fileName + '&&&' + checksum + '&&&' + str(fileLen)
-			clientSocket = socket(AF_INET , SOCK_STREAM)
-			clientSocket.connect((serverName , serverPort))
-			clientSocket.settimeout(defaultTimeout)
-			sent = clientSocket.send(DATA)  #Server verifies checksum has changed and preps file for contents
-			rec = clientSocket.recv(socketRecvBuffer)
-			if rec.find('&&&') != -1:  #Send file contents
-				startProgress('Upload')
-				fileBuffer = int(rec.split('&&&')[0])
-				serverRecvBuffer = int(rec.split('&&&')[1])
-				curBuffer = 0
-				for line in outputData:
-					while len(line) > 0:
-						if len(line) > serverRecvBuffer:
-							curBuffer += clientSocket.send(line[:serverRecvBuffer])
-							line = line[serverRecvBuffer:]
-						else:
-							curBuffer += clientSocket.send(line)
-							line = ''
-						if curBuffer >= fileBuffer:
-							recvLen = clientSocket.recv(socketRecvBuffer)
-							if not recvLen.isdigit():
-								clientSocket.close()
-								endProgress()
-								return recvLen
-							progress(int(float(recvLen) / fileLen * 100))
-							curBuffer = 0
-				endProgress()
-				rec = clientSocket.recv(socketRecvBuffer)
-			clientSocket.close()
-			return rec
+		fileLoc = userSets['senddir'] + fileName	#File location
+		fileLen = int(os.path.getsize(fileLoc))		#File length
+		##--Catch pointless transfers--##
+		if fileLen == 0: return 'Server will not accept empty files'
+		
+		##--Get file contents--##
+		##--Separate actual filename from path if user gave subpath. ex A/B.txt --> B.txt --##
+		if fileName.find('/') != -1: fileName = fileName[fileName.rfind('/')+1:]
+		fout = open(fileLoc , 'rb')
+		outputData = fout.readlines()
+		fout.close()
+		
+		##--Create socket and server command--##
+		checksum = hashFile(fileLoc , hashlib.sha256())
+		DATA = credentials + '&&&' + fileName + '&&&' + checksum + '&&&' + str(fileLen)
+		clientSocket = socket(AF_INET , SOCK_STREAM)
+		clientSocket.connect((serverName , serverPort))
+		clientSocket.settimeout(defaultTimeout)
+		sent = clientSocket.send(DATA) 
+		##--Server verifies checksum has changed, preps file for contents, and sends buffer numbers--##
+		rec = clientSocket.recv(socketRecvBuffer)
+		if rec.find('&&&') != -1:
+			startProgress('Upload')		#Init terminal progress bar
+			fileBuffer = int(rec.split('&&&')[0])			#fileBuffer is the most the client will send before the server responds 'all clear'
+			serverRecvBuffer = int(rec.split('&&&')[1])		#serverRecvBuffer is the length of the string the server will recieve at one time
+			curBuffer = 0
+			
+			##--Send file contents--##
+			for line in outputData:
+				while len(line) > 0:
+					
+					##--Send only what doesn't exceed what the server can recieve at one time--##
+					if len(line) > serverRecvBuffer:
+						curBuffer += clientSocket.send(line[:serverRecvBuffer])
+						line = line[serverRecvBuffer:]
+					else:
+						curBuffer += clientSocket.send(line)
+						line = ''
+					
+					##--Waits for server to send 'all clear' before continuing. Server sends int of total chars it has recieved (for prog bar and bug testing)--##
+					if curBuffer >= fileBuffer:
+						recvLen = clientSocket.recv(socketRecvBuffer)
+						
+						##--If server error, close services and return error message--##
+						if not recvLen.isdigit():
+							clientSocket.close()
+							endProgress()	#Close terminal progress bar
+							return recvLen
+							
+						progress(int(float(recvLen) / fileLen * 100))	#Update terminal progress bar
+						curBuffer = 0
+			endProgress()	#Close terminal progress bar
+			rec = clientSocket.recv(socketRecvBuffer)	#Server sends complete or error message
+		clientSocket.close()
+		return rec
 	except Exception , e:
 		return 'Error: ' + str(e)[str(e).find(']')+1:]
 
+##--Recieve a file (regardless of contents or size) from the server--##
 def recvFile(credentials , fileName , userSets):
 	try:
+		##--Create socket and server command--##
 		clientSocket = socket(AF_INET , SOCK_STREAM)
 		clientSocket.connect((serverName , serverPort))
 		clientSocket.settimeout(defaultTimeout)
 		clientSocket.send(credentials+'&&&'+fileName)
+		##--Server prepares file and sends file length and pre-transfer checksum--##
 		rec = clientSocket.recv(socketRecvBuffer).split('&&&')
-		fileLen = rec[0]
-		if not fileLen.isdigit(): return fileLen
-		fileLen = int(fileLen)
+		##--Check for error message--##
+		if not rec[0].isdigit(): return rec[0]
+		fileLen = int(rec[0])
 		recvChecksum = rec[1]
+		
+		##--Prepare file for content--##
+		##--Separate actual filename from path if user gave subpath. ex A/B.txt --> B.txt --##
 		if fileName.find('/'): fileName = fileName[fileName.find('/')+1:]
 		fileLoc = userSets['destdir'] + fileName
 		fin = file(fileLoc , 'wb')
-		finLen = 0 #current length of recieving file
+		
+		finLen = 0	#current length of recieving file
 		curBuffer = 0
+		##--Send server fileBuffer and socketRecvBuffer. Signals server to begin sending file contents--##
 		clientSocket.send(str(fileBuffer)+'&&&'+str(socketRecvBuffer))
-		startProgress('Download')
+		startProgress('Download')	#Init terminal progress bar
+		
 		##--Recieve file of variable length--##
 		while finLen < fileLen:
 			line = clientSocket.recv(socketRecvBuffer)
@@ -103,14 +131,17 @@ def recvFile(credentials , fileName , userSets):
 			curBuffer += len(line)
 			if curBuffer >= fileBuffer:
 				clientSocket.send('cont')
-				progress(int(float(finLen) / fileLen * 100))
+				progress(int(float(finLen) / fileLen * 100))	#Update terminal progress bar
 				curBuffer = 0
 		fin.close()
-		endProgress()
+		endProgress()	#Close terminal progress bar
+		
+		##--Compare checksum for transfer errors--##
 		checksum = hashFile(fileLoc , hashlib.sha256())
 		if checksum != recvChecksum:
 			clientSocket.send('checksumError')
 			return 'File Recieve Error: Checksum did not match. Downloaded file might be corrupted. Try getting again'
+		
 		clientSocket.send('success')
 		clientSocket.close()
 		return 'File recieved'
@@ -169,8 +200,8 @@ def getKeyString(dic , linsep , valsep=''):
 	return ret
 
 ##--Returns checksum for given file using given hash--##
-##Ex:  hashFile(fileName , hashlib.sha256())
-##Note: You CANNOT give hasher a default value. Hasher object would be carried over each function call spitting out inconsistent values
+##--Ex:  hashFile(fileName , hashlib.sha256())
+##--Note: You CANNOT CANNOT CANNOT give hasher a default value. Hasher object would be carried over each function call spitting out inconsistent values
 def hashFile(fileLoc , hasher , blocksize=65536):
 	fileObj = open(fileLoc , 'rb')
 	buf = fileObj.read(blocksize)
@@ -195,6 +226,7 @@ def getUnPw(login = False):
 		userName = getInput('userName : ')
 		if len(userName) < 8: print 'Username is not long enough'
 		elif userName.find('&') != -1: print 'Due to the way this program talks with the server, your username cannot contain "&"'
+	##--Repeat until passwords match or #quit
 	passMatch = False
 	while passMatch == False:
 		password = ''
@@ -213,10 +245,10 @@ def getUnPw(login = False):
 ##--Compares the version values (expressed in a list)--##
 ##--ex. v1.2.0 compared to v1.2.1 is compareVersions([1,2,0],[1,2,1]) --> -1 --##
 def compareVersions(list1 , list2):
-	if list1[0] == list2[0]:
+	if list1 == list2: return 0
+	elif list1[0] == list2[0]:
 		if list1[1] == list2[1]:
-			if list1[2] == list2[2]: return 0
-			elif list1[2] > list2[2]: return 1
+			if list1[2] > list2[2]: return 1
 			elif list1[2] < list2[2]: return -1
 		elif list1[1] > list2[1]: return 1
 		elif list1[1] < list2[1]: return -1

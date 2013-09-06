@@ -2,35 +2,40 @@
 
 ##--File Locket (server)
 ##--Created by Michael duPont (flyinactor91@gmail.com)
-##--v1.3.0 [2013-08-07]
-##--Python 2.7.4 - Unix
+##--v1.3.1 [2013-09-05]
+##--Python 2.7.5 - Unix
 
 from serverCommands import *
 from socket import *
 import pickle , os , random , time , shutil
 
+##--Server settings--##
+serverPort = 60145
+###The current server password is 'letmein'. To change, run the saltHash function found in clientCommands on your new password with 'masteradmin' as the user and paste the output below
+serverPassword = 'c4c98a50cf4abcd72737aff8679dc17b19a42eecb388c13133cd2de6685282578fe9c53320bae4b8b3ea88bf3e0079a35b4570bdfc81cad7cfb498f024b6fea3'
+defaultTimeout = 5				#  Seconds. Timeout used for normal connection conditions
+socketRecvBuffer = 1024			#  2**x Chars server gets from socket at one time
+maxConnectedClients = 1			#  Number of simultaneous clients that the server will accept
+fileBuffer = 500000				#  Amount of chars for server to recv and process at one time. View dev notes
+outputToFile = False				#  Server log sent to .txt (True) or sent to terminal (False)
+##--End settings--##
+
+##--Used at client startup. For client function, string must start int.int.int ; Everything behind it will only be used in a print statement--##
+serverVersion = '1.3.1 [2013-09-05]'
+
+##--Accepted commands--##
+credCommands = ['sendfile' , 'recvfile' , 'viewfiles' , 'delfile' , 'versions' , 'recvver' , 'archive' , 'test' , 'stats' , 'viewalerts' , 'clearalerts' , 'adminshutdown' , 'adminclear' , 'adminshowusers' , 'adminserverstats' , 'adminsendalert']
+adminCommands = ['adminshutdown' , 'adminclear' , 'adminshowusers' , 'adminserverstats' , 'adminsendalert']
+noCredCommands = ['signup' , 'login']
+
+
+
 ##--Main Server Function--##
 def main():
-	##--Server settings--##
-	serverPort = 60145
-	###The current server password is 'letmein'. To change, run the saltHash function found in clientCommands on your new password and paste the output below
-	serverPassword = 'c4c98a50cf4abcd72737aff8679dc17b19a42eecb388c13133cd2de6685282578fe9c53320bae4b8b3ea88bf3e0079a35b4570bdfc81cad7cfb498f024b6fea3'
-	defaultTimeout = 5				#  Timeout used for normal connection conditions
-	socketRecvBuffer = 1024			#  2**x
-	maxConnectedClients = 1			#  Number of simultaneous clients that the server will accept
-	fileBuffer = 500000				#  Amount of bits for server to recv and process at a time. View dev notes
-	outputToFile = False				#  Server log sent to .txt (True) or sent to terminal (False)
-	##--End settings--##
 	
-	serverVersion = '1.3.0 [2013-08-07]'
-
-	##--Accepted commands--##
-	credCommands = ['sendfile' , 'recvfile' , 'viewfiles' , 'delfile' , 'versions' , 'recvver' , 'archive' , 'test' , 'stats' , 'viewalerts' , 'clearalerts' , 'adminshutdown' , 'adminclear' , 'adminshowusers' , 'adminserverstats' , 'adminsendalert']
-	adminCommands = ['adminshutdown' , 'adminclear' , 'adminshowusers' , 'adminserverstats' , 'adminsendalert']
-	noCredCommands = ['signup' , 'login']
-
 	##--Check bin and make if unavailable--##
 	if not os.path.isdir('bin'): os.mkdir('bin')
+	
 	##--Load in (via pickle) User and File dictionaries--##
 	try:
 		storageFile = open('bin/ServerStorage.pkl', 'rb')
@@ -42,10 +47,12 @@ def main():
 		UserStorage = {}
 		FileStorage = {}
 		ServerStats = {'Total Files':0,'Total Files and Versions':0,'Total Users':0,'Critical Errors':0}
-
+	
+	##--Open or create output file. Else will print to terminal--##
 	if outputToFile: foutput = open('bin/serverLog.txt' , 'ab')
 	else: foutput = None
-
+	
+	##--Init server socket--##
 	serverSocket = socket(AF_INET , SOCK_STREAM)
 	serverSocket.bind(('' , serverPort))
 	serverSocket.listen(maxConnectedClients)
@@ -63,10 +70,12 @@ def main():
 			stringIn = stringIn.split('&&&')
 			command = stringIn[0]
 
-			##--Command Rec--##
+			##--Command Recognition--##
 
 			##--Sent upon client startup, not sent to log/terminal--##
+			##--Send version number for client comparison--##
 			if command == 'versionTest': connectionSocket.send(serverVersion)
+			##--Send int number of alerts--##
 			elif command == 'alertNum':
 				userName = stringIn[1]
 				if userName in UserStorage: connectionSocket.send(str(len(UserStorage[userName][2])))
@@ -78,50 +87,58 @@ def main():
 			elif command in credCommands:
 				userName = stringIn[1]
 				outputMsg(foutput , str(addr)+'  '+userName+'  '+command)
-				cont = checkCreds(userName , stringIn[2] , UserStorage , foutput)
+				cont = checkCreds(userName , stringIn[2] , UserStorage , foutput) #Returns 'Y' to continue. Else returns error string
 				if cont == 'Y':
 
 					##--Server recieves file and stores in user's folder--##
 					if command == 'sendfile':
 						fileName = stringIn[3]
 						recvChecksum = stringIn[4]
+						##--Checks Whether file has changed. If not, send error and quit--##
 						if fileName in FileStorage[userName] and FileStorage[userName][fileName][0] == recvChecksum:
 							connectionSocket.send('File has not changed since last upload')
 						else:
+							##--Send file transfer buffers--##
 							connectionSocket.send(str(fileBuffer)+'&&&'+str(socketRecvBuffer))
 							try:
-								fileLen = int(stringIn[5])
-								finLen = 0
+								fileLen = int(stringIn[5])	#Length of incoming file
+								finLen = 0					#Length server has recieved
 								timeString = time.strftime('%Y-%m-%d %H:%M:%SZ' , time.gmtime())
-								if not os.path.isfile('bin/'+userName+'/'+fileName):
-									os.mkdir((os.getcwd())+'/bin/'+userName+'/.fileversions/'+fileName)
-									FileStorage[userName][fileName] = ['',[]]
+								##--Open file--##
 								fin = file('bin/'+userName+'/'+fileName , 'wb')
-								curBuffer = 0
+								curBuffer = 0	#Like finLen but used with fileBuffer
+								##--Recieve until file on server matches length of file on client--##
 								while finLen < fileLen:
 									line = connectionSocket.recv(socketRecvBuffer)
 									curBuffer += len(line)
+									##--Once curBuffer equals or exceeds fileBuffer, send client int of total length recieved--##
 									if curBuffer >= fileBuffer:
 										connectionSocket.send(str(finLen))
 										curBuffer = 0
 									fin.write(line)
-									finLen = getFileSize(fin)
+									finLen = getFileSize(fin)	#More reliable to check the actual length of the file than track the incoming chars
 									#print fileLen , finLen   #Good point to help figure out var fileBuffer
 								fin.close()
 								checksum = hashFile('bin/'+userName+'/'+fileName , hashlib.sha256())
+								##--Checks if both files are the same via checksum--##
 								if checksum != recvChecksum:
 									connectionSocket.send('File Send Error: Checksum did not match. Try sending again')
 									outputMsg(foutput , '\tchecksum error')
 								else:
-									FileStorage[userName][fileName][0] = recvChecksum
-									FileStorage[userName][fileName][1].append(timeString)
+									##--If file is new, create data and version folder--##
+									if fileName not in FileStorage[userName]: FileStorage[userName][fileName] = ['',[]]	#['checksum string',[list of versions by date]]
+									if not os.path.isdir('bin/'+userName+'/.fileversions/'+fileName): os.mkdir('bin/'+userName+'/.fileversions/'+fileName)
+									FileStorage[userName][fileName][0] = recvChecksum		#Store checksum
+									FileStorage[userName][fileName][1].append(timeString)	#Store date-time in version list
+									##--Copy recieved file into .fileversions/filename/x%%%filename--##
 									shutil.copy2('bin/'+userName+'/'+fileName , 'bin/'+userName+'/.fileversions/'+fileName+'/'+str(len(FileStorage[userName][fileName][1]))+'%%%'+fileName)
-									connectionSocket.send('File received')
+									##--If first upload, increase total file and version count. Else just version count--##
 									if len(FileStorage[userName][fileName][1]) == 1:
 										ServerStats['Total Files'] += 1
 										ServerStats['Total Files and Versions'] += 2
 									else:
 										ServerStats['Total Files and Versions'] += 1
+									connectionSocket.send('File received')
 									outputMsg(foutput , '\t' + fileName + '  success')
 							except Exception , e:
 								connectionSocket.send('File Save Error: ' + str(e))
@@ -191,8 +208,8 @@ def main():
 						verNum = 0
 						for fileName in FileStorage[userName]: verNum += len(FileStorage[userName][fileName][1])
 						ret += '\nTotal Stored Versions:  '+str(verNum)
-						storeSize = getFolderSize('bin/'+userName)/(1024*1024.0)
-						verSize = getFolderSize('bin/'+userName+'/.fileversions')/(1024*1024.0)
+						storeSize = getFolderSize('bin/'+userName)/(1024*1024.0)	#Size in every file in MB
+						verSize = getFolderSize('bin/'+userName+'/.fileversions')/(1024*1024.0)		#Size of version folder in MB
 						ret += '\nApprox Storage Size:  {0:.3f} MB'.format(storeSize-verSize)
 						ret += '\n***** with Versions:  {0:.3f} MB'.format(storeSize)
 						connectionSocket.send(ret)
@@ -203,6 +220,8 @@ def main():
 							if len(UserStorage[userName][2]) == 0: ret = 'You have no alerts'
 							else: ret = getNumListString(UserStorage[userName][2])
 							connectionSocket.send(ret)
+						##--The # only command was moved out of cred commands because it's called at start-up--##
+						##--This line is kept in case this functionality is needed in the future--##
 						else: connectionSocket.send(str(len(UserStorage[userName][2])))
 					
 					##--Clears user's alerts--##
@@ -222,16 +241,22 @@ def main():
 							##--Clears all server data--##
 							elif command == 'adminclear':
 								try:
+									##--Save old data by renaming file--##
+									##--This command will fail here if the old bin still exists as a precaution--##
 									os.rename('bin' , '~~bin~~')
-									os.mkdir('bin')
+									##--Reset all server databases--##
 									UserStorage.clear()
 									FileStorage.clear()
 									ServerStats = {'Total Files':0,'Total Files and Versions':0,'Total Users':0,'Critical Errors':0}
+									##--Rebuild file system--##
+									os.mkdir('bin')
 									if outputToFile: foutput = open('bin/serverLog.txt' , 'ab')
 									else: foutput = None
 									resetTime = time.strftime('%Y-%m-%d %H:%M:%SZ' , time.gmtime())
 									outputMsg(foutput , '\n\n'+resetTime+'\nThe server is ready to recieve after adminclear')
 									connectionSocket.send('Server has reset all storage')
+								
+								##--Raises if ~~bin~~ still exists. Prevents database from accidental deletion--##
 								except OSError:
 									outputMsg(foutput , '\tbin backup still exists')
 									connectionSocket.send('Error: Previous bin backup still exists')
@@ -264,9 +289,13 @@ def main():
 									connectionSocket.send('Alert has been sent to ' + targetUser)
 								else:
 									connectionSocket.send('Error: Could not send the alert to '+targetUser+'. User does not exist')
+						
+						##--If server password did not match--##
 						else:
 							outputMsg(foutput , '\tincorrect password')
 							connectionSocket.send('Error: Access Denied')
+				
+				##--If username or session ID did not match--##
 				else: connectionSocket.send(cont)
 
 			##--Requires username and password--##
