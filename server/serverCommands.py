@@ -1,5 +1,5 @@
 ##--Michael duPont
-##--v1.3.1 [2013-09-05]
+##--v2.0.0 [2013-09-27]
 ##--Function order: sendFile , getKeyString , getNumListString , getFileSize , getFolderSize , checkCreds , hashFile , outputMsg , makeZip , criticalError
 
 import hashlib , os , shutil , zipfile , time

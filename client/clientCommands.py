@@ -1,8 +1,8 @@
 ##--Michael duPont
-##--v1.3.1 [2013-09-05]
+##--v2.0.0 [2013-09-27]
 ##--Function order:
 ##--Main functions: sendData , sendFile , recvFile , viewFileAndSend , startUp
-##--Minor functions: saltHash , getFileSize , getKeyString , hashFile , saveStorage , getUnPw , compareVersions , getInput , ProgressBar
+##--Minor functions: saltHash , getFileSize , getKeyString , hashFile , saveStorage , getUnPw , compareVersions , ProgressBar , stringToList
 
 from socket import *
 import hashlib , getpass , os , pickle , sys
@@ -149,13 +149,12 @@ def recvFile(credentials , fileName , userSets):
 		return 'Error: ' + str(e)[str(e).find(']')+1:]
 
 def viewFileAndSend(credentials , command , userSets):
-	ret = sendData('viewfiles&&&'+credentials)
+	ret = sendData('view&&&'+credentials)
 	#Server checks if sessionID matches and sends list of files (if any)
 	if ret != 'You have not uploaded any files':
 		print ret
 		ret = ret.split('\n') #Create searchable list from file names
 		fileName = raw_input('\nFile: ')
-		if fileName == '#quit': return ''
 		if fileName in ret: ret = sendData(command+'&&&'+credentials+'&&&'+fileName)
 		else: ret = 'Error: Not an available file'
 		if ret[:4] == '\nVer': return ret , fileName
@@ -223,22 +222,20 @@ def getUnPw(login = False):
 	print 'Both username and password must be at least 8 characters long'
 	##--Username and password must be 8+ chars and not contain &&& --##
 	while len(userName) < 8 or userName.find('&') != -1:
-		userName = getInput('userName : ')
+		userName = raw_input('userName : ')
 		if len(userName) < 8: print 'Username is not long enough'
 		elif userName.find('&') != -1: print 'Due to the way this program talks with the server, your username cannot contain "&"'
-	##--Repeat until passwords match or #quit
+	##--Repeat until passwords match
 	passMatch = False
 	while passMatch == False:
 		password = ''
 		while len(password) < 8 or password.find('&') != -1:
 			password = getpass.getpass('Password : ')
-			if password == '#quit': sys.exit()
-			elif len(password) < 8: print 'Password is not long enough'
+			if len(password) < 8: print 'Password is not long enough'
 			elif password.find('&') != -1: print 'Due to the way this program talks with the server, your password cannot contain "&"'
 		if login: return userName , password
 		verify = getpass.getpass('Verify Password : ')
-		if password == '#quit': sys.exit()
-		elif verify != password: print "Passwords do not match"
+		if verify != password: print "Passwords do not match"
 		else: passMatch = True
 	return userName , password
 
@@ -255,12 +252,6 @@ def compareVersions(list1 , list2):
 	elif list1[0] > list2[0]: return 1
 	elif list1[0] < list2[0]: return -1
 
-##--Checks for #quit to quit program at any point
-def getInput(prompt = ''):
-	ret = raw_input(prompt)
-	if ret == '#quit': sys.exit()
-	else: return ret
-
 ##--Create, update, and close a single-line progress bar--##
 ##--Credit to '6502' at 'http://stackoverflow.com/questions/6169217/replace-console-output-in-python'--##
 def startProgress(title):
@@ -276,3 +267,20 @@ def endProgress():
     sys.stdout.write('='*(40 - globals()['progress_x']))
     sys.stdout.write(']\n')
     sys.stdout.flush()
+
+##--Creates list of strings with "..." strings. Recreates BASH argv for parser--##
+def stringToList(strIn):
+	ret = []
+	if strIn.find('"') == -1:		#If strIn is only single-word strings
+		subRet = strIn.split(' ')
+		for item in subRet: ret.append(item)
+	else:							#If strIn contains a multi-word string
+		sStart = strIn.find('"')
+		sEnd = strIn.find('"' , sStart+1)
+		subStr = strIn[sStart+1:sEnd]
+		if sStart != 0:
+			for item in strIn[:sStart-1].split(' '): ret.append(item)
+		ret.append(subStr)
+		if sEnd+1 != len(strIn):	#If subStr is not the end, append the recursion
+			for item in stringToList(strIn[sEnd+2:]): ret.append(item)
+	return ret

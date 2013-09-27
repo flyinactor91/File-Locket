@@ -2,7 +2,7 @@
 
 ##--File Locket (server)
 ##--Created by Michael duPont (flyinactor91@gmail.com)
-##--v1.3.1 [2013-09-05]
+##--v2.0.0 [2013-09-27]
 ##--Python 2.7.5 - Unix
 
 from serverCommands import *
@@ -17,15 +17,15 @@ defaultTimeout = 5				#  Seconds. Timeout used for normal connection conditions
 socketRecvBuffer = 1024			#  2**x Chars server gets from socket at one time
 maxConnectedClients = 1			#  Number of simultaneous clients that the server will accept
 fileBuffer = 500000				#  Amount of chars for server to recv and process at one time. View dev notes
-outputToFile = False				#  Server log sent to .txt (True) or sent to terminal (False)
+outputToFile = True				#  Server log sent to .txt (True) or sent to terminal (False)
 ##--End settings--##
 
 ##--Used at client startup. For client function, string must start int.int.int ; Everything behind it will only be used in a print statement--##
-serverVersion = '1.3.1 [2013-09-05]'
+serverVersion = '2.0.0 [2013-09-27]'
 
 ##--Accepted commands--##
-credCommands = ['sendfile' , 'recvfile' , 'viewfiles' , 'delfile' , 'versions' , 'recvver' , 'archive' , 'test' , 'stats' , 'viewalerts' , 'clearalerts' , 'adminshutdown' , 'adminclear' , 'adminshowusers' , 'adminserverstats' , 'adminsendalert']
-adminCommands = ['adminshutdown' , 'adminclear' , 'adminshowusers' , 'adminserverstats' , 'adminsendalert']
+credCommands = ['send' , 'get' , 'view' , 'del' , 'viewver' , 'recvver' , 'arc' , 'test' , 'stat' , 'viewnot' , 'clearnot' , 'shutdown' , 'clear' , 'showusers' , 'serverstat' , 'sendnotif']
+adminCommands = ['shutdown' , 'clear' , 'showusers' , 'serverstat' , 'sendnotif']
 noCredCommands = ['signup' , 'login']
 
 
@@ -75,8 +75,8 @@ def main():
 			##--Sent upon client startup, not sent to log/terminal--##
 			##--Send version number for client comparison--##
 			if command == 'versionTest': connectionSocket.send(serverVersion)
-			##--Send int number of alerts--##
-			elif command == 'alertNum':
+			##--Send int number of notifications--##
+			elif command == 'notifNum':
 				userName = stringIn[1]
 				if userName in UserStorage: connectionSocket.send(str(len(UserStorage[userName][2])))
 				else:
@@ -91,7 +91,7 @@ def main():
 				if cont == 'Y':
 
 					##--Server recieves file and stores in user's folder--##
-					if command == 'sendfile':
+					if command == 'send':
 						fileName = stringIn[3]
 						recvChecksum = stringIn[4]
 						##--Checks Whether file has changed. If not, send error and quit--##
@@ -147,7 +147,7 @@ def main():
 								outputMsg(foutput , '\t' + fileName + '  Error: ' + str(e))
 
 					##--Sends the requested file to the user--##
-					elif command == 'recvfile':
+					elif command == 'get':
 						fileName = stringIn[3]
 						if fileName in FileStorage[userName]:
 							msg = sendFile(connectionSocket , 'bin/'+userName+'/'+fileName , socketRecvBuffer)
@@ -157,14 +157,14 @@ def main():
 							outputMsg(foutput , '\t' + fileName + '  Error: not a file')
 
 					##--Sends a list of the user's stored files--##
-					elif command == 'viewfiles':
+					elif command == 'view':
 						ret = getKeyString(FileStorage[userName] , '\n')
 						if ret == '':
 							ret = 'You have not uploaded any files'
 						connectionSocket.send(ret)
 
 					##--Deletes a user's stored file and versions--##
-					elif command == 'delfile':
+					elif command == 'del':
 						fileName = stringIn[3]
 						if fileName in FileStorage[userName]:
 							os.remove('bin/'+userName+'/'+fileName)
@@ -175,9 +175,9 @@ def main():
 							connectionSocket.send('File deleted')
 						else:
 							outputMsg(foutput , '\t' + fileName + '  Error: not found')
-
+					
 					##--Sends a list of versions for a given file--##
-					elif command == 'versions':
+					elif command == 'viewver':
 						fileName = stringIn[3]
 						if fileName in FileStorage[userName]: connectionSocket.send(getNumListString(FileStorage[userName][fileName][1],True))
 
@@ -192,7 +192,7 @@ def main():
 							outputMsg(foutput , '\tNot a file')
 
 					##--Sends the user an archive of their files--##
-					elif command == 'archive':
+					elif command == 'arc':
 						makeZip(userName , 'bin/'+userName , stringIn[3])
 						msg = sendFile(connectionSocket , userName+'.zip' , socketRecvBuffer)
 						outputMsg(foutput , '\t' + msg)
@@ -203,7 +203,7 @@ def main():
 						connectionSocket.send('Connection successful')
 
 					##--Sends formatted string of the user's stats--##
-					elif command == 'stats':
+					elif command == 'stat':
 						ret = '\nNumber of Files:  '+str(len(FileStorage[userName]))
 						verNum = 0
 						for fileName in FileStorage[userName]: verNum += len(FileStorage[userName][fileName][1])
@@ -214,32 +214,32 @@ def main():
 						ret += '\n***** with Versions:  {0:.3f} MB'.format(storeSize)
 						connectionSocket.send(ret)
 					
-					##--Sends number of alerts or foratted string of alerts to user--##
-					elif command == 'viewalerts':
+					##--Sends number or foratted string of notifications to user--##
+					elif command == 'viewnot':
 						if stringIn[3]:
-							if len(UserStorage[userName][2]) == 0: ret = 'You have no alerts'
+							if len(UserStorage[userName][2]) == 0: ret = 'You have no notifications'
 							else: ret = getNumListString(UserStorage[userName][2])
 							connectionSocket.send(ret)
 						##--The # only command was moved out of cred commands because it's called at start-up--##
 						##--This line is kept in case this functionality is needed in the future--##
 						else: connectionSocket.send(str(len(UserStorage[userName][2])))
 					
-					##--Clears user's alerts--##
-					elif command == 'clearalerts':
+					##--Clears user's notifiactions--##
+					elif command == 'clearnot':
 						UserStorage[userName][2] = []
-						connectionSocket.send('Alerts have been cleared')
+						connectionSocket.send('Notifiactions have been cleared')
 
 					##--Admin Tools--##
 					elif command in adminCommands:
 						if stringIn[3] == serverPassword:
 
 							##--Saves data and shuts down server--##
-							if command == 'adminshutdown':
+							if command == 'shutdown':
 								quitFlag = True
 								connectionSocket.send('Server is now shutting down')
 
 							##--Clears all server data--##
-							elif command == 'adminclear':
+							elif command == 'clear':
 								try:
 									##--Save old data by renaming file--##
 									##--This command will fail here if the old bin still exists as a precaution--##
@@ -267,28 +267,28 @@ def main():
 									connectionSocket.send('Error: Unknown')
 
 							##--Returns all usernames in UserStorage--##
-							elif command == 'adminshowusers':
+							elif command == 'showusers':
 								connectionSocket.send('\nUsernames Stored on Server:' + getKeyString(UserStorage , '\n\t'))
 
 							##--Returns all usernames in UserStorage--##
-							elif command == 'adminserverstats':
+							elif command == 'serverstat':
 								ret = getKeyString(ServerStats , '\n' , ':  ')
 								ret += '\nApprox Server Size:  {0:.3f} MB'.format(getFolderSize('bin')/(1024*1024.0))
 								ret += '\nTime Online:  '+onlineTime
 								if 'resetTime' in locals(): ret += '\nTime of Last Reset:  '+resetTime
 								connectionSocket.send(ret)
 							
-							##--Admin alert--##
-							elif command == 'adminsendalert':
+							##--Admin Notify--##
+							elif command == 'sendnotif':
 								targetUser = stringIn[4]
 								if targetUser == 'all':
 									for user in UserStorage: UserStorage[user][2].append(stringIn[5])
-									connectionSocket.send('Alert has been sent to all users')
+									connectionSocket.send('Notification has been sent to all users')
 								elif targetUser in UserStorage:
 									UserStorage[targetUser][2].append(stringIn[5])
-									connectionSocket.send('Alert has been sent to ' + targetUser)
+									connectionSocket.send('Notification has been sent to ' + targetUser)
 								else:
-									connectionSocket.send('Error: Could not send the alert to '+targetUser+'. User does not exist')
+									connectionSocket.send('Error: Could not send the notification to '+targetUser+'. User does not exist')
 						
 						##--If server password did not match--##
 						else:
@@ -335,7 +335,7 @@ def main():
 
 			##--Exception acts as a safeguard in case something went wrong during transmition--##
 			else:
-				outputMsg(foutput , str(addr)+'  Command error')
+				outputMsg(foutput , str(addr)+'  Command error  '+command)
 				ServerStats['Critical Errors'] += 1
 				criticalError(stringIn)
 				connectionSocket.send('Server did not recognise the command given')

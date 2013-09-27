@@ -1,6 +1,6 @@
 File Locket
 Created by Michael duPont (flyinactor91@gmail.com)
-v1.3.1 [2013-09-05]
+v2.0.0 [2013-09-27]
 Python 2.7.5 - Unix
 
 A brief overview of data structures and improvements/issues
@@ -11,6 +11,7 @@ userSets = {'senddir' , 'destdir' , 'startalert'}
 Storage pickle save/load order: userName, sessionID, userSets
 File encryption would be implemented with client-side keys before transmission
 --Currently trying to work out how to store key-derivation on server for when client logs into a new session
+--Will likely implement as optional TNO encryption
 Up arrow yields previous text entries
 --Trying to find module to replace raw_input that works with arrow key keyboard event
 Currently, getpass issues echo while in x86 Python IDLE

@@ -1,6 +1,6 @@
 File Locket
 =========
-**v1.3.1 [2013-09-05]**
+**v2.0.0 [2013-09-27]**
 
 Simple file storage service to store, access, and delete files.
 
@@ -14,6 +14,8 @@ Found at [https://github.com/flyinactor91/File-Locket](https://github.com/flyina
 
 Client
 -------
+Command prompt or terminal input
+
 Saves username, sessionID, and user preferences between sessions
 
 * User prefs: senddir , destdir , startalert
@@ -74,43 +76,43 @@ Upgrades for future releases
 
 Available commands
 --------------------------
-**sendfile** ---- Send a file to the server
+**send   -s** ---- Send files to the server
 
-**getfile** ------ Get a file from the server
+**get    -g** ---- Get files from the server
 
-**viewfiles** --- View stored files
+**view   -v** ---- View stored files
 
-**delfile** ------ Delete a file on the server
+**del    -d** ---- Delete files on the server
 
-**versions** --- File version options
+**ver    -v** ---- File version options
 
-**archive** ---- Get all files on server (versions if true)
+**arc    -a** ---- Get all files on server
 
-**set** ---------- Change program settings
+**set    -us** --- Change program settings
 
-**stats** -------- Get info about about files
+**stat   -st** --- Get info about about files
 
-**alerts** ------- Alert options
+**notid  -n** ---- Notification options
 
-**test** --------- Test server connection
+**test   -t** ---- Test server connection
 
-**logout** ----- Logout and quit
+**login  -li** --- Login from terminal
 
-**quit** --------- Quit without logging out
+**logout -lo** --- Logout and quit
+
+**quit   -q** ---- Quit without logging out
 
 *Admin Tools (requires server pw):*
 
-**adminshowusers** --- Returns all saved usernames
+**showusers  A-su** --- Returns all saved usernames
 
-**adminserverstats** --- Returns server statistics
+**serverstat A-ss** --- Returns server statistics
 
-**adminsendalert** ----- Send alert to users
+**sendnotif  A-sn** --- Send alert to users
 
-**adminclear** ----------- Clears all server lib data
+**clear      A-cl** --- Clears all server lib data
 
-**adminshutdown** ---- Shuts down server and saves data
-
-Typing #quit into a prompt exits that prompt
+**shutdown   A-sd** --- Shuts down server and saves data
 
 Release Notes
 ------------------
@@ -173,3 +175,11 @@ Release Notes
 * Bug fixes
 
 * Code readability
+
+2.0.0 [2013-09-27]
+
+* Call from command line
+
+* Completely reworked client architecture
+
+* Command name changes and shortcuts
