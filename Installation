@@ -1,0 +1,18 @@
+Installation Notes:
+
+Usage: sudo python setup.py (   /-client/-server) (-link)
+
+The setup.py file must have root permissions
+
+
+Nothing after setup.py does the full install (client+server)
+-client installs just client into /usr/local/bin/filelocket/client
+-server installs just server into /usr/local/bin/filelocket/server
+
+-link installs links to curent location (directory) of client and server
+-client -link installs just client link
+-server -link installs just server link
+
+
+Links are updated whenever setup.py is installed.
+Ex. -client -link overrides -client (no link)

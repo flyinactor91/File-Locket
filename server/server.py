@@ -2,7 +2,7 @@
 
 ##--File Locket (server)
 ##--Created by Michael duPont (flyinactor91@gmail.com)
-##--v2.0.0 [2013-09-27]
+##--v2.0.1a [2013-09-30]
 ##--Python 2.7.5 - Unix
 
 from serverCommands import *
@@ -21,7 +21,7 @@ outputToFile = True				#  Server log sent to .txt (True) or sent to terminal (Fa
 ##--End settings--##
 
 ##--Used at client startup. For client function, string must start int.int.int ; Everything behind it will only be used in a print statement--##
-serverVersion = '2.0.0 [2013-09-27]'
+serverVersion = '2.0.0a [2013-09-30]'
 
 ##--Accepted commands--##
 credCommands = ['send' , 'get' , 'view' , 'del' , 'viewver' , 'recvver' , 'arc' , 'test' , 'stat' , 'viewnot' , 'clearnot' , 'shutdown' , 'clear' , 'showusers' , 'serverstat' , 'sendnotif']
@@ -33,12 +33,15 @@ noCredCommands = ['signup' , 'login']
 ##--Main Server Function--##
 def main():
 	
+	binDir = os.path.expanduser('~/.filelocket/bin/')
+	
 	##--Check bin and make if unavailable--##
-	if not os.path.isdir('bin'): os.mkdir('bin')
+	if not os.path.isdir(os.path.expanduser('~/.filelocket')): os.mkdir(os.path.expanduser('~/.filelocket'))
+	if not os.path.isdir(binDir): os.mkdir(binDir)
 	
 	##--Load in (via pickle) User and File dictionaries--##
 	try:
-		storageFile = open('bin/ServerStorage.pkl', 'rb')
+		storageFile = open(binDir+'ServerStorage.pkl', 'rb')
 		UserStorage = pickle.load(storageFile)
 		FileStorage = pickle.load(storageFile)
 		ServerStats = pickle.load(storageFile)
@@ -49,7 +52,7 @@ def main():
 		ServerStats = {'Total Files':0,'Total Files and Versions':0,'Total Users':0,'Critical Errors':0}
 	
 	##--Open or create output file. Else will print to terminal--##
-	if outputToFile: foutput = open('bin/serverLog.txt' , 'ab')
+	if outputToFile: foutput = open(binDir+'serverLog.txt' , 'ab')
 	else: foutput = None
 	
 	##--Init server socket--##
@@ -105,7 +108,7 @@ def main():
 								finLen = 0					#Length server has recieved
 								timeString = time.strftime('%Y-%m-%d %H:%M:%SZ' , time.gmtime())
 								##--Open file--##
-								fin = file('bin/'+userName+'/'+fileName , 'wb')
+								fin = file(binDir+userName+'/'+fileName , 'wb')
 								curBuffer = 0	#Like finLen but used with fileBuffer
 								##--Recieve until file on server matches length of file on client--##
 								while finLen < fileLen:
@@ -119,7 +122,7 @@ def main():
 									finLen = getFileSize(fin)	#More reliable to check the actual length of the file than track the incoming chars
 									#print fileLen , finLen   #Good point to help figure out var fileBuffer
 								fin.close()
-								checksum = hashFile('bin/'+userName+'/'+fileName , hashlib.sha256())
+								checksum = hashFile(binDir+userName+'/'+fileName , hashlib.sha256())
 								##--Checks if both files are the same via checksum--##
 								if checksum != recvChecksum:
 									connectionSocket.send('File Send Error: Checksum did not match. Try sending again')
@@ -127,11 +130,11 @@ def main():
 								else:
 									##--If file is new, create data and version folder--##
 									if fileName not in FileStorage[userName]: FileStorage[userName][fileName] = ['',[]]	#['checksum string',[list of versions by date]]
-									if not os.path.isdir('bin/'+userName+'/.fileversions/'+fileName): os.mkdir('bin/'+userName+'/.fileversions/'+fileName)
+									if not os.path.isdir(binDir+userName+'/.fileversions/'+fileName): os.mkdir(binDir+userName+'/.fileversions/'+fileName)
 									FileStorage[userName][fileName][0] = recvChecksum		#Store checksum
 									FileStorage[userName][fileName][1].append(timeString)	#Store date-time in version list
 									##--Copy recieved file into .fileversions/filename/x%%%filename--##
-									shutil.copy2('bin/'+userName+'/'+fileName , 'bin/'+userName+'/.fileversions/'+fileName+'/'+str(len(FileStorage[userName][fileName][1]))+'%%%'+fileName)
+									shutil.copy2(binDir+userName+'/'+fileName , binDir+userName+'/.fileversions/'+fileName+'/'+str(len(FileStorage[userName][fileName][1]))+'%%%'+fileName)
 									##--If first upload, increase total file and version count. Else just version count--##
 									if len(FileStorage[userName][fileName][1]) == 1:
 										ServerStats['Total Files'] += 1
@@ -150,7 +153,7 @@ def main():
 					elif command == 'get':
 						fileName = stringIn[3]
 						if fileName in FileStorage[userName]:
-							msg = sendFile(connectionSocket , 'bin/'+userName+'/'+fileName , socketRecvBuffer)
+							msg = sendFile(connectionSocket , binDir+userName+'/'+fileName , socketRecvBuffer)
 							outputMsg(foutput , '\t' + fileName + '  ' + msg)
 						else:
 							connectionSocket.send('Error: not a file')
@@ -167,8 +170,8 @@ def main():
 					elif command == 'del':
 						fileName = stringIn[3]
 						if fileName in FileStorage[userName]:
-							os.remove('bin/'+userName+'/'+fileName)
-							shutil.rmtree('bin/'+userName+'/.fileversions/'+fileName)
+							os.remove(binDir+userName+'/'+fileName)
+							shutil.rmtree(binDir+userName+'/.fileversions/'+fileName)
 							ServerStats['Total Files and Versions'] = ServerStats['Total Files and Versions'] - (len(FileStorage[userName][fileName][1])+1)
 							ServerStats['Total Files'] = ServerStats['Total Files'] - 1
 							del FileStorage[userName][fileName]
@@ -185,7 +188,7 @@ def main():
 					elif command == 'recvver':
 						fileName = stringIn[3]
 						try:
-							msg = sendFile(connectionSocket , 'bin/'+userName+'/.fileversions/'+fileName , socketRecvBuffer)
+							msg = sendFile(connectionSocket , binDir+userName+'/.fileversions/'+fileName , socketRecvBuffer)
 							outputMsg(foutput , '\t' + fileName + '  ' + msg)
 						except IOError:
 							connectionSocket.send('Error: Not a file or version')
@@ -193,7 +196,7 @@ def main():
 
 					##--Sends the user an archive of their files--##
 					elif command == 'arc':
-						makeZip(userName , 'bin/'+userName , stringIn[3])
+						makeZip(userName , binDir+userName , stringIn[3])
 						msg = sendFile(connectionSocket , userName+'.zip' , socketRecvBuffer)
 						outputMsg(foutput , '\t' + msg)
 						os.remove(userName+'.zip')
@@ -208,8 +211,8 @@ def main():
 						verNum = 0
 						for fileName in FileStorage[userName]: verNum += len(FileStorage[userName][fileName][1])
 						ret += '\nTotal Stored Versions:  '+str(verNum)
-						storeSize = getFolderSize('bin/'+userName)/(1024*1024.0)	#Size in every file in MB
-						verSize = getFolderSize('bin/'+userName+'/.fileversions')/(1024*1024.0)		#Size of version folder in MB
+						storeSize = getFolderSize(binDir+userName)/(1024*1024.0)	#Size in every file in MB
+						verSize = getFolderSize(binDir+userName+'/.fileversions')/(1024*1024.0)		#Size of version folder in MB
 						ret += '\nApprox Storage Size:  {0:.3f} MB'.format(storeSize-verSize)
 						ret += '\n***** with Versions:  {0:.3f} MB'.format(storeSize)
 						connectionSocket.send(ret)
@@ -243,14 +246,14 @@ def main():
 								try:
 									##--Save old data by renaming file--##
 									##--This command will fail here if the old bin still exists as a precaution--##
-									os.rename('bin' , '~~bin~~')
+									os.rename(binDir , os.path.expanduser('~/.filelocket/~~bin~~'))
 									##--Reset all server databases--##
 									UserStorage.clear()
 									FileStorage.clear()
 									ServerStats = {'Total Files':0,'Total Files and Versions':0,'Total Users':0,'Critical Errors':0}
 									##--Rebuild file system--##
-									os.mkdir('bin')
-									if outputToFile: foutput = open('bin/serverLog.txt' , 'ab')
+									os.mkdir(binDir)
+									if outputToFile: foutput = open(binDir+'serverLog.txt' , 'ab')
 									else: foutput = None
 									resetTime = time.strftime('%Y-%m-%d %H:%M:%SZ' , time.gmtime())
 									outputMsg(foutput , '\n\n'+resetTime+'\nThe server is ready to recieve after adminclear')
@@ -273,7 +276,7 @@ def main():
 							##--Returns all usernames in UserStorage--##
 							elif command == 'serverstat':
 								ret = getKeyString(ServerStats , '\n' , ':  ')
-								ret += '\nApprox Server Size:  {0:.3f} MB'.format(getFolderSize('bin')/(1024*1024.0))
+								ret += '\nApprox Server Size:  {0:.3f} MB'.format(getFolderSize(binDir)/(1024*1024.0))
 								ret += '\nTime Online:  '+onlineTime
 								if 'resetTime' in locals(): ret += '\nTime of Last Reset:  '+resetTime
 								connectionSocket.send(ret)
@@ -313,9 +316,12 @@ def main():
 						sessionID = str(random.randint(0 , 10**6))
 						UserStorage[userName] = [pWord , sessionID , []]
 						FileStorage[userName] = {}
-						if not os.path.isdir((os.getcwd())+'/bin/'+userName):
-							os.mkdir((os.getcwd())+'/bin/'+userName)
-							os.mkdir((os.getcwd())+'/bin/'+userName+'/.fileversions')
+						#if not os.path.isdir((os.getcwd())+'/bin/'+userName):
+							#os.mkdir((os.getcwd())+'/bin/'+userName)
+							#os.mkdir((os.getcwd())+'/bin/'+userName+'/.fileversions')
+						if not os.path.isdir(binDir+userName):
+							os.mkdir(binDir+userName)
+							os.mkdir(binDir+userName+'/.fileversions')
 						ServerStats['Total Users'] += 1
 						connectionSocket.send('success&&&' + sessionID)
 
@@ -348,7 +354,7 @@ def main():
 		connectionSocket.close()
 
 		##--Constantly save storage data--##
-		storageFile = open('bin/ServerStorage.pkl', 'wb')
+		storageFile = open(binDir+'ServerStorage.pkl', 'wb')
 		pickle.dump(UserStorage, storageFile)
 		pickle.dump(FileStorage, storageFile)
 		pickle.dump(ServerStats, storageFile)

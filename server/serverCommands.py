@@ -1,5 +1,5 @@
 ##--Michael duPont
-##--v2.0.0 [2013-09-27]
+##--v2.0.1a [2013-09-30]
 ##--Function order: sendFile , getKeyString , getNumListString , getFileSize , getFolderSize , checkCreds , hashFile , outputMsg , makeZip , criticalError
 
 import hashlib , os , shutil , zipfile , time
@@ -110,7 +110,7 @@ def outputMsg(fileObj , msg):
 	except: print msg
 
 ##--Creates zip archive of folder contents--##
-##Ex:  makeZip(userName , 'bin/'+userName)
+##Ex:  makeZip(userName , '~/.filelocket/bin/'+userName)
 def makeZip(name , dirloc='' , allFiles = False):
 	if dirloc != '':
 		dirloc += '/'
@@ -129,7 +129,7 @@ def makeZip(name , dirloc='' , allFiles = False):
 
 ##--Outputs variable amout of data to error file--##
 def criticalError(*errorInfo):
-	fout = open('bin/criticalErrors.txt' , 'ab')
+	fout = open(os.path.expanduser('~/.filelocket/bin/criticalErrors.txt') , 'ab')
 	fout.write(time.strftime('%Y-%m-%d---%X'))
 	for i in errorInfo: fout.write('\n'+str(i))
 	fout.write('\n\n')

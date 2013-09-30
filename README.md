@@ -1,6 +1,6 @@
 File Locket
 =========
-**v2.0.0 [2013-09-27]**
+**v2.0.1a [2013-09-30]**
 
 Simple file storage service to store, access, and delete files.
 
@@ -183,3 +183,11 @@ Release Notes
 * Completely reworked client architecture
 
 * Command name changes and shortcuts
+
+2.0.1a [2013-09-30]
+
+* New setup file
+
+* filelocket added to linux PATH
+
+* Consolidated data to ~/.filelocket

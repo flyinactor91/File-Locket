@@ -14,7 +14,7 @@ import pickle , sys , platform
 aboutString = """
 File Locket
 Created by Michael duPont (flyinactor91@gmail.com)
-v2.0.0 [2013-09-27]
+v2.0.1a [2013-09-30]
 Python 2.7.5 - Unix
 """
 
@@ -87,6 +87,11 @@ noteString = """
 	Call from command line
 	Completely reworked client architecture
 	Command name changes and shortcuts
+
+2.0.1a [2013-09-30]
+	New setup file
+	filelocket added to linux PATH
+	Consolidated data to ~/.filelocket
 """
 
 ##--More detailed help for each command--##
@@ -133,11 +138,14 @@ clientVersion = '2.0.0'
 
 
 ##------------------------------------Startup actions------------------------------------##
-	
+
+##--Check bin and make if unavailable--##
+if not os.path.isdir(os.path.expanduser('~/.filelocket')): os.mkdir(os.path.expanduser('~/.filelocket'))
+
 ##--Create client data by trying to load the .pkl storage file.--##
 ##--If no file is found (aka first run), declare default values--##
 try:
-	storageFile = open('ClientStorage.pkl', 'rb')
+	storageFile = open(os.path.expanduser('~/.filelocket/ClientStorage.pkl'), 'rb')
 	userName = pickle.load(storageFile)
 	sessionID = pickle.load(storageFile)
 	userSets = pickle.load(storageFile)
