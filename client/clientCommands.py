@@ -1,5 +1,5 @@
 ##--Michael duPont
-##--v2.0.1a [2013-09-30]
+##--v2.0.1 [2013-10-21]
 ##--Function order:
 ##--Main functions: sendData , sendFile , recvFile , viewFileAndSend , startUp
 ##--Minor functions: saltHash , getFileSize , getKeyString , hashFile , saveStorage , getUnPw , compareVersions , ProgressBar , stringToList

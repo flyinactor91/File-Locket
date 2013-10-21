@@ -1,6 +1,6 @@
 File Locket
 =========
-**v2.0.1a [2013-09-30]**
+**v2.0.1 [2013-10-21]**
 
 Simple file storage service to store, access, and delete files.
 
@@ -84,7 +84,7 @@ Available commands
 
 **del    -d** ---- Delete files on the server
 
-**ver    -v** ---- File version options
+**ver    -vr** ---- File version options
 
 **arc    -a** ---- Get all files on server
 
@@ -184,10 +184,10 @@ Release Notes
 
 * Command name changes and shortcuts
 
-2.0.1a [2013-09-30]
+2.0.1 [2013-10-21]
 
 * New setup file
 
-* filelocket added to linux PATH
+* fl and fl-server added to linux PATH
 
 * Consolidated data to ~/.filelocket

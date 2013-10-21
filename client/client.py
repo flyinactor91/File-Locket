@@ -14,7 +14,7 @@ import pickle , sys , platform
 aboutString = """
 File Locket
 Created by Michael duPont (flyinactor91@gmail.com)
-v2.0.1a [2013-09-30]
+v2.0.1a [2013-10-21]
 Python 2.7.5 - Unix
 """
 
@@ -88,9 +88,9 @@ noteString = """
 	Completely reworked client architecture
 	Command name changes and shortcuts
 
-2.0.1a [2013-09-30]
+2.0.1 [2013-10-21]
 	New setup file
-	filelocket added to linux PATH
+	fl and fl-server added to linux PATH
 	Consolidated data to ~/.filelocket
 """
 
@@ -104,7 +104,7 @@ helpStrings = {'send':'\nsend/-s (local files*)\nSend one or more files to the s
 			   'del':'\ndel/-d (files on server*)\nPerminantly delete a file and its saved versions from the server\nCalling del without file name calls view and a prompt',
 			   '-d':'\ndel/-d (files on server*)\nPerminantly delete a file and its saved versions from the server\nCalling del without file name calls view and a prompt',
 			   'ver':'\nver/-v [command] (file on server) (file version #)\nAvailable commands:\n\tview - View all the versions of a file stored on the server\n\tget - Recieve a file version from the server',
-			   '-v':'\nver/-v [command] (file on server) (file version #)\nAvailable commands:\n\tview - View all the versions of a file stored on the server\n\tget - Recieve a file version from the server',
+			   '-vr':'\nver/-v [command] (file on server) (file version #)\nAvailable commands:\n\tview - View all the versions of a file stored on the server\n\tget - Recieve a file version from the server',
 			   'arc':"\narc/-a (true)\nRecieve a .zip archive of files stored on the server\nAlso includes the file versions if call followed by 'true'",
 			   '-a':"\narc/-a (true)\nRecieve a .zip archive of files stored on the server\nAlso includes the file versions if call followed by 'true'",
 			   'set':"\nset/-us (var) (value)\nUser can change user settings\nCalling set with only a var displays that var's value\nCall set by itself for a list of available vars",
@@ -133,7 +133,7 @@ helpStrings = {'send':'\nsend/-s (local files*)\nSend one or more files to the s
 			   'A-sd':'\nshutdown/A-sd\nRemotely shutdown the server\nRequires server password'}
 
 ##--The non-alpha version number of the client to compare with that of the server. Ex. 1.3.0--##
-clientVersion = '2.0.0'
+clientVersion = '2.0.1'
 
 
 
@@ -191,12 +191,7 @@ def parser(varsIn):
 		if resp[:5] != 'Error': quitFlag = True	#If succesful server shutdown
 	elif command == 'about' or command == '-ab': print aboutString
 	elif command == 'notes' or command == '-no': print noteString
-	elif command == 'help' or command == '-h':
-		if len(varsIn) == 1: print helpString
-		elif len(varsIn) == 2:
-			if varsIn[1] in helpStrings: print helpStrings[varsIn[1]]
-			else: print 'Not a command'
-		else: print 'help (command)'
+	elif command == 'help' or command == '-h': helpFunc(varsIn)
 	elif command == 'login' or command == '-li': print 'You are already logged in'
 	elif command == 'logout' or command == '-lo':
 		userName , sessionID = '' , ''
@@ -339,6 +334,14 @@ def sendNotifFunc(varsIn):
 			notif = raw_input('Notification to send: ')
 		print sendData('sendnotif&&&'+userName+'&&&'+sessionID+'&&&'+password+'&&&'+user+'&&&'+notif)
 
+def helpFunc(varsIn):
+	print varsIn
+	if len(varsIn) == 1: print helpString
+	elif len(varsIn) == 2:
+		if varsIn[1] in helpStrings: print helpStrings[varsIn[1]]
+		else: print 'Not a command'
+	else: print 'help (command)'
+
 
 
 ##------------------------------------Run Environments------------------------------------##
@@ -400,6 +403,13 @@ def termMain():
 ##------------------------------------Program Main------------------------------------##
 def main():
 	##--Startup Actions--##
+	
+	##--Print help without contacting server if terminal--##
+	if len(sys.argv) > 1:
+		if sys.argv[1] == 'help' or sys.argv[1] == '-h':
+			sys.argv.pop(0)
+			helpFunc(sys.argv)
+			sys.exit()
 	
 	##--Check if server is online and determines if client-server is compatable--##
 	serverData = sendData('versionTest')

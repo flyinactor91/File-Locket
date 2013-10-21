@@ -4,6 +4,8 @@ Usage: sudo python setup.py (   /-client/-server) (-link)
 
 The setup.py file must have root permissions
 
+You can change the bash command name for client and server in setup.py
+
 
 Nothing after setup.py does the full install (client+server)
 -client installs just client into /usr/local/bin/filelocket/client

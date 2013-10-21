@@ -2,7 +2,7 @@
 
 ##--File Locket (server)
 ##--Created by Michael duPont (flyinactor91@gmail.com)
-##--v2.0.1a [2013-09-30]
+##--v2.0.1 [2013-10-21]
 ##--Python 2.7.5 - Unix
 
 from serverCommands import *
@@ -21,7 +21,7 @@ outputToFile = True				#  Server log sent to .txt (True) or sent to terminal (Fa
 ##--End settings--##
 
 ##--Used at client startup. For client function, string must start int.int.int ; Everything behind it will only be used in a print statement--##
-serverVersion = '2.0.0a [2013-09-30]'
+serverVersion = '2.0.1 [2013-10-21]'
 
 ##--Accepted commands--##
 credCommands = ['send' , 'get' , 'view' , 'del' , 'viewver' , 'recvver' , 'arc' , 'test' , 'stat' , 'viewnot' , 'clearnot' , 'shutdown' , 'clear' , 'showusers' , 'serverstat' , 'sendnotif']
@@ -146,7 +146,7 @@ def main():
 							except Exception , e:
 								connectionSocket.send('File Save Error: ' + str(e))
 								ServerStats['Critical Errors'] += 1
-								criticalError(str(e) , stringIn , FileStorage[userName])
+								criticalError(binDir , str(e) , stringIn , FileStorage[userName])
 								outputMsg(foutput , '\t' + fileName + '  Error: ' + str(e))
 
 					##--Sends the requested file to the user--##
@@ -266,7 +266,7 @@ def main():
 								except Exception , e:
 									outputMsg(foutput , '\tError: ' + str(e))
 									ServerStats['Critical Errors'] += 1
-									criticalError(str(e) , stringIn)
+									criticalError(binDir , str(e) , stringIn)
 									connectionSocket.send('Error: Unknown')
 
 							##--Returns all usernames in UserStorage--##
@@ -343,11 +343,11 @@ def main():
 			else:
 				outputMsg(foutput , str(addr)+'  Command error  '+command)
 				ServerStats['Critical Errors'] += 1
-				criticalError(stringIn)
+				criticalError(binDir , stringIn)
 				connectionSocket.send('Server did not recognise the command given')
 		except Exception , e:
 			ServerStats['Critical Errors'] += 1
-			criticalError(str(e) , stringIn)
+			criticalError(binDir , str(e) , stringIn)
 			outputMsg(foutput , '\tError: ' + str(e))
 
 		##--Close client connection--##
